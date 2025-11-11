@@ -1,0 +1,22 @@
+{% extends base_template %}
+{% block title %}Pay for Food Order{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Pay for Food Order</h2>
+
+    <p><strong>Food:</strong> {{ order.food.name }}</p>
+    <p><strong>Quantity:</strong> {{ order.quantity }}</p>
+    <p><strong>Total Amount:</strong> Ksh {{ total_amount|floatformat:2 }}</p>
+
+    <form method="POST" id="mpesaForm">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="phone" class="form-label">Phone Number</label>
+            <input type="text" name="phone" id="phone" class="form-control" placeholder="2547XXXXXXXX" required>
+        </div>
+
+        <button type="submit" class="btn btn-success w-100">Pay Now</button>
+    </form>
+</div>
+{% endblock %}

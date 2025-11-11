@@ -1,0 +1,34 @@
+{% extends 'base.admin.html' %} {% block title %}Add Room{% endblock %} {% block content %}
+<div class="card shadow-sm p-4">
+    <h2 class="mb-4">Add Room</h2>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- Room Name -->
+        <div class="mb-3">
+            <label for="id_name" class="form-label">Room Name</label>
+            <input type="text" id="id_name" name="name" class="form-control" placeholder="Enter room name" required>
+        </div>
+
+        <!-- Room Type -->
+        <div class="mb-3">
+            <label for="room_type" class="form-label">Select Room Type</label>
+            <select id="room_type" name="room_type" class="form-select" required>
+                <option value="">-- Select Room Type --</option>
+                {% for room_type in room_types %}
+                <option value="{{ room_type.id }}">{{ room_type.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Image Upload -->
+        <div class="mb-3">
+            <label for="id_image" class="form-label">Upload Image</label>
+            <input type="file" id="id_image" name="image" class="form-control">
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save Room</button>
+        <a href="{% url 'list_rooms' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

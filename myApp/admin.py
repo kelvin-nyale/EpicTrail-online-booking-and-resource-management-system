@@ -1,0 +1,23 @@
+from django.contrib import admin
+from .models import Activity, Package, Booking, Room, Food, Tour, RoomType, RoomBooking, Notification, Duty, FoodOrder
+
+# Register your models here.
+admin.site.register(Activity),
+admin.site.register(Package),
+admin.site.register(Booking),
+admin.site.register(Room),
+admin.site.register(Food),
+admin.site.register(Tour),
+admin.site.register(RoomType),
+admin.site.register(RoomBooking),
+admin.site.register(Notification),
+admin.site.register(Duty),
+admin.site.register(FoodOrder)
+
+from .models import MpesaTransaction
+
+@admin.register(MpesaTransaction)
+class MpesaTransactionAdmin(admin.ModelAdmin):
+    list_display = ('phone', 'amount', 'mpesa_receipt_number', 'result_code', 'result_desc', 'transaction_date')
+
+
