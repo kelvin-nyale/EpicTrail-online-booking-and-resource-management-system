@@ -1,5 +1,5 @@
 {% extends 'base.staff.html' %} {% block title %}EpicTrail Adventures - Staff Dashboard{% endblock %} {% block content %}
-<h1 class="mb-4">Welcome, <strong>{{user.username}}</strong>!</h1>
+<!-- <h1 class="mb-4">Welcome, <strong>{{user.username}}</strong>!</h1> -->
 
 <!-- Stats -->
 <div class="row mb-4">
@@ -73,7 +73,7 @@
 
 <!-- Quick Links -->
 <div class="d-flex gap-3">
-    <a href="#" class="btn btn-outline-primary">Allocate Resources</a>
+    <a href="{% url 'staff_duties' %}" class="btn btn-outline-primary">Allocated Resources</a>
     <a href="#" class="btn btn-outline-success">Submit Report</a>
     <a href="#" class="btn btn-outline-dark">View Schedule</a>
 </div>

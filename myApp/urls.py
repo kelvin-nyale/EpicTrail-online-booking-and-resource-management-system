@@ -19,6 +19,8 @@ urlpatterns = [
     path('users/add/', views.add_user, name='add_user'),
     path('users/edit/<int:user_id>/', views.edit_user, name='edit_user'),
     path('users/delete/<int:user_id>/', views.delete_user, name='delete_user'),
+    path('profile/update/', views.update_profile, name='update_profile'),
+
     
     path('activities/', views.activity_list, name='activity_list'),
     path('activities/add/', views.add_activity, name='add_activity'),
@@ -57,6 +59,7 @@ urlpatterns = [
     path('bookings/delete/<int:pk>/', views.delete_booking, name='delete_booking'),
     path('bookings/new/', views.create_booking, name='create_booking'),
     path('bookings/new/for-user/', views.admin_create_booking, name='create_user_booking'),  # booking on behalf of user
+
     
     path('menu/', views.food_menu, name='food_menu'),
     path('order/place/', views.place_order, name='place_order'),

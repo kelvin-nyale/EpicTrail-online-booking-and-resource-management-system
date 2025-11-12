@@ -952,7 +952,7 @@ def admin_create_booking(request):
         for package in booking.packages.all():
             total_amount += package.price_per_person
         for room in booking.rooms.all():
-            total_amount += room.price_per_night
+            total_amount += room.room_type.price_per_night
         for food in booking.food.all():
             total_amount += food.price_per_person
         for tour in booking.tours.all():
@@ -1163,6 +1163,7 @@ def delete_booking(request, pk):
     booking.delete()
     messages.success(request, "Booking deleted successfully!")
     return redirect('booking_list')
+
 
 @login_required
 @user_passes_test(admin_required)
@@ -1621,6 +1622,57 @@ def staff_duties(request):
         return redirect('staff_duties')
 
     return render(request, "duties.staff.html", {"duties": duties})
+
+
+@login_required
+def update_profile(request):
+    user = request.user
+    profile, created = Profile.objects.get_or_create(user=user)
+
+    # Determine base template based on role
+    if user.is_superuser:
+        base_template = 'base.admin.html'
+    elif user.is_staff:
+        base_template = 'base.staff.html'
+    else:
+        base_template = 'base.user.html'
+
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        photo = request.FILES.get('photo')
+
+        user.username = username
+        user.email = email
+
+        if password:
+            user.set_password(password)
+
+        user.save()
+
+        if photo:
+            profile.photo = photo
+            profile.save()
+
+        # if password:
+        #     return redirect('login')  # Require re-login if password changed
+        # return redirect('user_dashboard')
+
+        messages.success(request, "Profile updated successfully!")
+
+        if user.is_superuser:
+            return redirect('admin_dashboard')
+        elif user.is_staff:
+            return redirect('staff_dashboard')
+        else: 
+            return redirect('user_dashboard')
+
+    return render(request, 'update_profile.html', {
+        'user': user,
+        'profile': profile,
+        'base_template': base_template
+    })
 
 @login_required
 @user_passes_test(admin_required)

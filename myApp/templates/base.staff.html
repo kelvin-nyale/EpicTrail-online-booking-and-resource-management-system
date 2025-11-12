@@ -84,17 +84,48 @@
 <body>
     <!-- Top Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#"><strong>EpicTrail Adventures</strong></a>
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#"><strong>EPICTRAIL <span class="text-danger">ADVENTURES</span></strong></a>
 
-            <div class="d-flex">
-                <a class="navbar-brand" href="#"> Created on: <strong>{{ user.date_joined }}</strong></a>
-                <a href="#" class="btn btn-outline-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" title="Manage Profile">
-                    <i class="bi bi-person"></i>
-                </a>
+        <div class="d-flex align-items-center">
+            <!-- Profile Dropdown -->
+            <div class="dropdown ms-2">
+                <a class="d-flex align-items-center justify-content-center dropdown-toggle" 
+                        type="button" 
+                        id="profileDropdown" 
+                        data-bs-toggle="dropdown" 
+                        aria-expanded="false"
+                        style="width: 40px; height: 40px;" 
+                        title="Manage Profile">
+                    {% if user.profile.photo %}
+                        <img src="{{ user.profile.photo.url }}" alt="{{ user.username }}" class="rounded-circle" width="40" height="40">
+                    {% else %}
+                        <i class="bi bi-person"></i>
+                    {% endif %}
+            </a>
+
+                <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="profileDropdown">
+                    <li class="dropdown-header text-center">
+                        <strong>{{ user.username }}</strong><br>
+                        <small>Member Since: {{ user.date_joined|date:"M d, Y" }}</small>
+                    </li>
+
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item" href="{% url 'update_profile' %}">
+                            <i class="bi bi-pencil-square me-2"></i> Update Profile
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item text-danger" href="{% url 'logout' %}">
+                            <i class="bi bi-box-arrow-right me-2"></i> Logout
+                        </a>
+                    </li>
+                </ul>
             </div>
         </div>
-    </nav>
+    </div>
+</nav>
 
     <!-- Sidebar -->
     <div class="sidebar">
@@ -107,10 +138,10 @@
         <a href="{% url 'list_rooms' %}"><i class="fas fa-bed me-2"></i> View Rooms</a>
         <a href="#"><i class="fas fa-utensils me-2"></i> View Food</a>
         <a href="#"><i class="fas fa-route me-2"></i> View Tours</a> -->
-        <a href="{% url 'staff_duties' %}"><i class="fas fa-clipboard-list me-2"></i> Manage Duties</a>
         <!-- <a href="#"><i class="fas fa-calendar-check me-2"></i> Manage Bookings</a> -->
          
-        <a href="{% url 'booking_list' %}"><i class="fas fa-calendar-check me-2"></i> All Bookings</a>
+        <a href="{% url 'booking_list' %}"><i class="fas fa-calendar-check me-2"></i> Bookings</a>
+        <a href="{% url 'staff_duties' %}"><i class="fas fa-clipboard-list me-2"></i> Assigned Duties</a>
         <a href="#"><i class="fas fa-chart-line me-2"></i> Reports</a>
         <a href="#"><i class="fas fa-bell me-2"></i> Notifications</a>
         <a href="#"><i class="fas fa-envelope me-2"></i> Messages</a>

@@ -10,8 +10,8 @@
         <a href="{% url 'create_user_booking' %}" class="btn btn-primary ms-2">
             <i class="fas fa-plus-circle"></i> Create New User Booking
         </a>
-        <a href="{% url 'upcoming_bookings' %}" class="btn btn-primary ms-2">
-            Upcoming Bookings
+        <a href="{% url 'booking_list' %}" class="btn btn-primary ms-2">
+            All Bookings
         </a>
     </div>
 </div>
@@ -19,12 +19,12 @@
     <div class="table-responsive">
         {% if upcoming_bookings %}
         <table class="table table-striped">
-        <thead>
+        <thead class="table-secondary">
             <tr>
                 <th>Customer</th>
                 <th>Check-In</th>
                 <th>Check-Out</th>
-                <th>Guests</th>
+                <th>Services & No. of Guests</th>
                 <th>Paid</th>
             </tr>
         </thead>
