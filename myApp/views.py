@@ -26,6 +26,7 @@ from django.core import management
 from .models import SystemSetting
 
 # for initiating stk push
+from .mpesa import initiate_stk_push
 import json
 import requests, base64
 from requests.auth import HTTPBasicAuth
@@ -1409,27 +1410,6 @@ def reports_analytics(request):
 
 # --- USERS ---
 
-# @login_required
-# def place_order(request):
-#     foods = Food.objects.all()
-
-#     if request.method == "POST":
-#         food_id = request.POST.get("food")
-#         quantity = int(request.POST.get("quantity"))
-#         check_in = request.POST.get("check_in")
-
-#         food = get_object_or_404(Food, id=food_id)
-
-#         FoodOrder.objects.create(
-#             user=request.user,
-#             food=food,
-#             quantity=quantity,
-#             check_in=check_in,
-#             status="Pending"
-#         )
-#         return redirect("my_orders")  # user is redirected to their orders list
-
-#     return render(request, "place_order.html", {"foods": foods})
 @login_required
 def place_order(request):
     foods = Food.objects.all()
@@ -1458,18 +1438,49 @@ def place_order(request):
 
     return render(request, "place_order.html", {"foods": foods})
 
+
+# @login_required
+# def pay_food_order(request, order_id):
+#     order = get_object_or_404(FoodOrder, id=order_id)
+
+#     # Calculate total amount
+#     total_amount = order.food.price_per_person * order.quantity
+
+#     if request.method == "POST":
+#         phone = request.POST.get("phone")
+#         if not phone:
+#             messages.error(request, "Please enter a valid phone number.")
+#             return redirect("pay_food_order", order_id=order_id)
+        
+#         try:
+#             result = initiate_stk_push(phone, total_amount)
+#             # Check if STK Push was successful
+#             if result.get("ResponseCode") == "0":
+#                 messages.success(request, "STK Push initiated! Check your phone to complete payment.")
+#             else:
+#                 messages.error(request, f"Payment failed: {result.get('errorMessage', 'Unknown error')}")
+#         except Exception as e:
+#             messages.error(request, f"Error initiating payment: {str(e)}")
+
+#         return redirect("my_orders")
+
+#     # Dynamic base template based on user role
+#     base_template = (
+#         "base.admin.html" if request.user.is_superuser
+#         else "base.staff.html" if request.user.is_staff
+#         else "base.user.html"
+#     )
+
+#     return render(request, "pay_food.html", {
+#         "order": order,
+#         "total_amount": total_amount,
+#         "base_template": base_template,
+#         "navbar": "stk"
+#     })
 @login_required
 def pay_food_order(request, order_id):
     order = get_object_or_404(FoodOrder, id=order_id)
-
-    # Calculate total amount
     total_amount = order.food.price_per_person * order.quantity
-
-    if request.method == "POST":
-        phone = request.POST.get("phone")
-        result = initiate_stk_push(phone, total_amount)
-        messages.success(request, "STK Push initiated!")
-        return redirect("my_orders")
 
     # Dynamic base template
     base_template = (
@@ -1478,12 +1489,25 @@ def pay_food_order(request, order_id):
         else "base.user.html"
     )
 
+    if request.method == "POST":
+        phone = request.POST.get("phone")
+        response = initiate_stk_push(phone, total_amount)
+
+        # Check M-Pesa response
+        if response.get("ResponseCode") == "0":
+            messages.success(request, "STK Push initiated! Check your phone to complete the payment.")
+        else:
+            error_msg = response.get("errorMessage", "Failed to initiate payment. Please try again.")
+            messages.error(request, f"STK Push failed: {error_msg}")
+
+        return redirect("my_orders")
+
     return render(request, "pay_food.html", {
         "order": order,
         "total_amount": total_amount,
         "base_template": base_template,
-        "navbar": "stk"
     })
+
 
 
 # Food menu listing
@@ -1716,48 +1740,61 @@ def system_settings(request):
 # ------------ M-Pesa Integration views ------------
 
 # ---------- UTILITY FUNCTIONS ----------
-def get_mpesa_access_token():
-    """
-    Get OAuth access token from Safaricom
-    """
-    token_url = f"https://{MPESA_ENVIRONMENT}/oauth/v1/generate?grant_type=client_credentials"
-    response = requests.get(token_url, auth=HTTPBasicAuth(MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET))
-    access_token = response.json().get('access_token')
-    return access_token
+# def generate_password():
+#     """
+#     Generate Lipa na M-Pesa Online password
+#     """
+#     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+#     password_str = f"{settings.MPESA_SHORTCODE}{settings.MPESA_PASSKEY}{timestamp}"
+#     password = base64.b64encode(password_str.encode('utf-8')).decode('utf-8')
+#     return password, timestamp
 
-def generate_password():
-    """
-    Generate base64 encoded password for STK Push
-    """
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    password = base64.b64encode(f"{MPESA_SHORTCODE}{MPESA_PASSKEY}{timestamp}".encode()).decode('utf-8')
-    return password, timestamp
+# def get_mpesa_access_token():
+#     """
+#     Get M-Pesa OAuth access token
+#     """
+#     token_url = f"{settings.MPESA_BASE_URL}/oauth/v1/generate?grant_type=client_credentials"
+#     response = requests.get(
+#         token_url,
+#         auth=HTTPBasicAuth(settings.MPESA_CONSUMER_KEY, settings.MPESA_CONSUMER_SECRET)
+#     )
+#     response_data = response.json()
+#     access_token = response_data.get("access_token")
+#     if not access_token:
+#         raise Exception(f"Failed to get M-Pesa access token: {response_data}")
+#     return access_token
 
-def initiate_stk_push(phone, amount, account_reference="EpicTrail Adventures", transaction_desc="Booking/Food orders Payment"):
-    """
-    Initiate Lipa na M-Pesa Online STK Push
-    """
-    password, timestamp = generate_password()
-    access_token = get_mpesa_access_token()
+# def initiate_stk_push(phone, amount, account_reference="EpicTrail Adventures", transaction_desc="Payment"):
+#     """
+#     Initiate Lipa na M-Pesa STK Push
+#     """
+#     password, timestamp = generate_password()
+#     access_token = get_mpesa_access_token()
+#     stk_url = f"{settings.MPESA_BASE_URL}/mpesa/stkpush/v1/processrequest"
 
-    stk_url = f"https://{MPESA_ENVIRONMENT}/mpesa/stkpush/v1/processrequest"
-    headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
-    payload = {
-        "BusinessShortCode": MPESA_SHORTCODE,
-        "Password": password,
-        "Timestamp": timestamp,
-        "TransactionType": "CustomerPayBillOnline",
-        "Amount": amount,
-        "PartyA": phone,
-        "PartyB": MPESA_SHORTCODE,
-        "PhoneNumber": phone,
-        "CallBackURL": CALLBACK_URL,
-        "AccountReference": account_reference,
-        "TransactionDesc": transaction_desc,
-    }
+#     payload = {
+#         "BusinessShortCode": settings.MPESA_SHORTCODE,
+#         "Password": password,
+#         "Timestamp": timestamp,
+#         "TransactionType": "CustomerPayBillOnline",
+#         "Amount": amount,
+#         "PartyA": phone,
+#         "PartyB": settings.MPESA_SHORTCODE,
+#         "PhoneNumber": phone,
+#         "CallBackURL": settings.CALLBACK_URL,
+#         "AccountReference": account_reference,
+#         "TransactionDesc": transaction_desc,
+#     }
 
-    response = requests.post(stk_url, json=payload, headers=headers)
-    return response.json()
+#     headers = {
+#         "Authorization": f"Bearer {access_token}",
+#         "Content-Type": "application/json"
+#     }
+
+#     response = requests.post(stk_url, json=payload, headers=headers)
+#     return response.json()
+
+
 
 
 # ---------- VIEWS ----------
@@ -1767,53 +1804,6 @@ def stk(request):
 # def token(request):
 #     token = get_mpesa_access_token()
 #     return render(request, 'token.html', {"token": token})
-
-# # booking payment view
-# def pay_booking(request, booking_id):
-#     booking = get_object_or_404(Booking, id=booking_id)
-
-#     if request.method == "POST":
-#         phone = request.POST.get("phone")
-#         amount = booking.total_amount  # ensure total_amount is stored/calculated
-
-#         result = initiate_stk_push(phone, amount)
-
-#         # Optional: Log result or handle failure here
-#         if result.get("ResponseCode") == "0":
-#             messages.success(request, "STK Push initiated successfully! Please complete the payment on your phone.")
-#         else:
-#             messages.error(request, f"Payment initiation failed: {result.get('errorMessage', 'Unknown error')}")
-
-#         return redirect("booking_list")  # redirect user to bookings list after initiating payment
-
-#     # Dynamic base template
-#     base_template = (
-#         "base.admin.html" if request.user.is_superuser
-#         else "base.staff.html" if request.user.is_staff
-#         else "base.user.html"
-#     )
-
-#     return render(request, "pay.html", {
-#         "booking": booking,
-#         "base_template": base_template,
-#         "navbar": "stk"
-#     })
-
-# Payment of food orders
-# @login_required
-# def pay_food_order(request, order_id):
-#     order = get_object_or_404(FoodOrder, id=order_id)
-
-#     if request.method == "POST":
-#         phone = request.POST.get("phone")
-#         total_amount = order.food.price_per_person * order.quantity
-#         result = initiate_stk_push(phone, total_amount, account_reference=f"FoodOrder-{order.id}", transaction_desc="Food Payment")
-#         messages.success(request, "STK Push initiated! Check your phone to complete payment.")
-#         return redirect("my_orders")  # redirect after payment
-
-#     base_template = "base.user.html"
-#     return render(request, "pay_food.html", {"order": order, "base_template": base_template, "navbar": "stk"})
-
 
 @csrf_exempt
 def mpesa_callback(request):

@@ -8,6 +8,16 @@ def total_users(request):
 def total_bookings(request):
     return {'total_bookings': Booking.objects.count()}
 
+# def total_orders(request):
+#     all_orders = 0
+
+#     if request.user.is_authenticated:
+#         orders = FoodOrder.objects.all()
+#         all_orders = sum(orders)
+
+#     return {'total_orders': all_orders}
+
+
 # def total_amount(request):
 #     """
 #     Returns the total amount payable for the authenticated user's bookings.
@@ -40,6 +50,8 @@ def total_amount(request):
 
     return {'total_amount': total}
 
+# def total_orders(request):
+#     return {'total_orders': FoodOrder.objects.count()}
 
 # all user bookings and their total amount per user all bookings
 def total_cost(request):

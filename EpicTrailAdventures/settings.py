@@ -22,12 +22,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # M-Pesa settings
+
+# Read environment variables
 MPESA_CONSUMER_KEY = os.getenv("MPESA_CONSUMER_KEY")
 MPESA_CONSUMER_SECRET = os.getenv("MPESA_CONSUMER_SECRET")
 MPESA_SHORTCODE = os.getenv("MPESA_SHORTCODE")
 MPESA_PASSKEY = os.getenv("MPESA_PASSKEY")
-MPESA_ENVIRONMENT = os.getenv("MPESA_ENVIRONMENT")  # "sandbox" or "live"
+MPESA_ENVIRONMENT = os.getenv("MPESA_ENVIRONMENT", "sandbox")  # default to sandbox
 CALLBACK_URL = os.getenv("CALLBACK_URL")
+
+# Base URL for M-Pesa API
+MPESA_BASE_URL = {
+    "sandbox": "https://sandbox.safaricom.co.ke",
+    "live": "https://api.safaricom.co.ke"
+}[MPESA_ENVIRONMENT]
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
