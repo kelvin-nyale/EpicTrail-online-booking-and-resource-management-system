@@ -1041,7 +1041,8 @@ def pay_booking(request, booking_id):
     base_template = (
         "base.admin.html" if request.user.is_superuser
         else "base.staff.html" if request.user.is_staff
-        else "base.user.html"
+        else "base.user.html" if not request.user.is_staff or request.user.is_superuser
+        else "base.html"
     )
 
     return render(request, "pay_booking.html", {

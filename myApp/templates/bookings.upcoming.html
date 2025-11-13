@@ -31,7 +31,10 @@
         <tbody>
             {% for booking in upcoming_bookings %}
             <tr>
-                <td>{{ booking.user.username }}</td>
+                <td>
+                    {% if booking.user %} {{ booking.user.username }} {% else %} {{ booking.customer_email|default:"N/A" }} {% endif %}
+                </td>
+                <!-- <td>{{ booking.user.username }}</td> -->
                 <td>{{ booking.check_in|date:"Y-m-d" }}</td>
                 <td>{{ booking.check_out|date:"Y-m-d" }}</td>
                 <!-- <td>{{ booking.pax_details }}</td> -->
