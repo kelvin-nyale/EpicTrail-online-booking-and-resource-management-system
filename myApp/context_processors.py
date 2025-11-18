@@ -66,8 +66,8 @@ def total_cost(request):
         }
 
     # Fetch all bookings for the logged-in user with related data
-    bookings = Booking.objects.filter(user=request.user).prefetch_related(
-        'activities', 'packages', 'rooms', 'food', 'tours'
+    bookings = Booking.objects.filter(booking_user=request.user).prefetch_related(
+        'booking_activities', 'booking_packages', 'booking_rooms', 'booking_food', 'booking_tours'
     )
 
     # Calculate total payable amount for all bookings

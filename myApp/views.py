@@ -34,12 +34,8 @@ from django.conf import settings
 from django.shortcuts import render, redirect
 from django.http import HttpResponse, JsonResponse
 
-# from .credentials import MpesaAccessToken, LipanaMpesaPpassword
-
 #  for callback url
 from django.views.decorators.csrf import csrf_exempt
-# from .models import MpesaTransaction
-
 # for displaying transactions to the admin
 from django.contrib import admin
 
@@ -754,124 +750,124 @@ def book_room(request, pk):
     return render(request, 'room_book.html', {'room': room})
 
 
-def create_booking(request):
-    """
-    Create a booking dynamically:
-    - Validate dates (allow same-day check-in/check-out)
-    - Validate room availability
-    - Store exact pax values for activities, packages, rooms, food, tours
-    - Role-based: Admin/Staff can select everything; normal users limited to Rooms & Packages
-    - Render correct base template depending on user role
-    """
-    if request.method == "POST":
-        # --- Handle customer details ---
-        customer_name = request.user.username if request.user.is_authenticated else request.POST.get("customer_name")
-        customer_email = request.user.email if request.user.is_authenticated else request.POST.get("customer_email")
+# def create_booking(request):
+#     """
+#     Create a booking dynamically:
+#     - Validate dates (allow same-day check-in/check-out)
+#     - Validate room availability
+#     - Store exact pax values for activities, packages, rooms, food, tours
+#     - Role-based: Admin/Staff can select everything; normal users limited to Rooms & Packages
+#     - Render correct base template depending on user role
+#     """
+#     if request.method == "POST":
+#         # --- Handle customer details ---
+#         customer_name = request.user.username if request.user.is_authenticated else request.POST.get("customer_name")
+#         customer_email = request.user.email if request.user.is_authenticated else request.POST.get("customer_email")
 
-        check_in = request.POST.get("check_in")
-        check_out = request.POST.get("check_out")
-        pax = int(request.POST.get("pax", 1))
+#         check_in = request.POST.get("check_in")
+#         check_out = request.POST.get("check_out")
+#         pax = int(request.POST.get("pax", 1))
 
-        selected_room_ids = request.POST.getlist("rooms")
-        selected_package_ids = request.POST.getlist("packages")
-        selected_activity_ids = request.POST.getlist("activities")
-        selected_food_ids = request.POST.getlist("food")
-        selected_tour_ids = request.POST.getlist("tours")
+#         selected_room_ids = request.POST.getlist("rooms")
+#         selected_package_ids = request.POST.getlist("packages")
+#         selected_activity_ids = request.POST.getlist("activities")
+#         selected_food_ids = request.POST.getlist("food")
+#         selected_tour_ids = request.POST.getlist("tours")
 
-        # --- Validate dates ---
-        if not check_in or not check_out:
-            messages.error(request, "Please select both check-in and check-out dates.")
-            return redirect("create_booking")
+#         # --- Validate dates ---
+#         if not check_in or not check_out:
+#             messages.error(request, "Please select both check-in and check-out dates.")
+#             return redirect("create_booking")
 
-        if check_out < check_in:  # allow same-day but not before
-            messages.error(request, "Check-out date cannot be before check-in.")
-            return redirect("create_booking")
+#         if check_out < check_in:  # allow same-day but not before
+#             messages.error(request, "Check-out date cannot be before check-in.")
+#             return redirect("create_booking")
 
-        # --- Validate room availability ---
-        for room_id in selected_room_ids:
-            room = get_object_or_404(Room, id=room_id)
-            overlapping = Booking.objects.filter(
-                rooms=room,
-                check_in__lt=check_out,
-                check_out__gt=check_in
-            ).count()
-            if overlapping >= room.room_type.total_rooms:
-                messages.error(request, f"Room '{room.name}' is fully booked for the selected dates.")
-                return redirect("create_booking")
+#         # --- Validate room availability ---
+#         for room_id in selected_room_ids:
+#             room = get_object_or_404(Room, id=room_id)
+#             overlapping = Booking.objects.filter(
+#                 rooms=room,
+#                 check_in__lt=check_out,
+#                 check_out__gt=check_in
+#             ).count()
+#             if overlapping >= room.room_type.total_rooms:
+#                 messages.error(request, f"Room '{room.name}' is fully booked for the selected dates.")
+#                 return redirect("create_booking")
 
-        # --- Role-based restrictions ---
-        if not (request.user.is_staff or request.user.is_superuser):
-            selected_activity_ids = []
-            selected_food_ids = []
-            selected_tour_ids = []
+#         # --- Role-based restrictions ---
+#         if not (request.user.is_staff or request.user.is_superuser):
+#             selected_activity_ids = []
+#             selected_food_ids = []
+#             selected_tour_ids = []
 
-        # --- Collect per-item pax values ---
-        pax_details = {}
+#         # --- Collect per-item pax values ---
+#         pax_details = {}
 
-        activities_pax = int(request.POST.get("activities_pax", 1))
-        if selected_activity_ids:
-            pax_details['activities'] = {'ids': selected_activity_ids, 'pax': activities_pax}
+#         activities_pax = int(request.POST.get("activities_pax", 1))
+#         if selected_activity_ids:
+#             pax_details['activities'] = {'ids': selected_activity_ids, 'pax': activities_pax}
 
-        packages_pax = int(request.POST.get("packages_pax", 1))
-        if selected_package_ids:
-            pax_details['packages'] = {'ids': selected_package_ids, 'pax': packages_pax}
+#         packages_pax = int(request.POST.get("packages_pax", 1))
+#         if selected_package_ids:
+#             pax_details['packages'] = {'ids': selected_package_ids, 'pax': packages_pax}
 
-        rooms_pax = int(request.POST.get("rooms_pax", 1))
-        if selected_room_ids:
-            pax_details['rooms'] = {'ids': selected_room_ids, 'pax': rooms_pax}
+#         rooms_pax = int(request.POST.get("rooms_pax", 1))
+#         if selected_room_ids:
+#             pax_details['rooms'] = {'ids': selected_room_ids, 'pax': rooms_pax}
 
-        food_pax = int(request.POST.get("food_pax", 1))
-        if selected_food_ids:
-            pax_details['food'] = {'ids': selected_food_ids, 'pax': food_pax}
+#         food_pax = int(request.POST.get("food_pax", 1))
+#         if selected_food_ids:
+#             pax_details['food'] = {'ids': selected_food_ids, 'pax': food_pax}
 
-        tours_pax = int(request.POST.get("tours_pax", 1))
-        if selected_tour_ids:
-            pax_details['tours'] = {'ids': selected_tour_ids, 'pax': tours_pax}
+#         tours_pax = int(request.POST.get("tours_pax", 1))
+#         if selected_tour_ids:
+#             pax_details['tours'] = {'ids': selected_tour_ids, 'pax': tours_pax}
 
-        # --- Create booking ---
-        booking = Booking.objects.create(
-            user=request.user if request.user.is_authenticated else None,
-            customer_name=customer_name,
-            customer_email=customer_email,
-            check_in=check_in,
-            check_out=check_out,
-            pax=pax,
-            pax_details=pax_details
-        )
+#         # --- Create booking ---
+#         booking = Booking.objects.create(
+#             user=request.user if request.user.is_authenticated else None,
+#             customer_name=customer_name,
+#             customer_email=customer_email,
+#             check_in=check_in,
+#             check_out=check_out,
+#             pax=pax,
+#             pax_details=pax_details
+#         )
 
-        booking.activities.set(selected_activity_ids)
-        booking.packages.set(selected_package_ids)
-        booking.rooms.set(selected_room_ids)
-        booking.food.set(selected_food_ids)
-        booking.tours.set(selected_tour_ids)
+#         booking.activities.set(selected_activity_ids)
+#         booking.packages.set(selected_package_ids)
+#         booking.rooms.set(selected_room_ids)
+#         booking.food.set(selected_food_ids)
+#         booking.tours.set(selected_tour_ids)
 
-        # --- After booking is saved ---
-        messages.success(request, "Booking created successfully! Proceed to payment.")
+#         # --- After booking is saved ---
+#         messages.success(request, "Booking created successfully! Proceed to payment.")
 
-        # Redirect user to payment page
-        return redirect("pay_booking", booking_id=booking.id)
+#         # Redirect user to payment page
+#         return redirect("pay_booking", booking_id=booking.id)
 
-        # messages.success(request, "Booking created successfully!")
-        # return redirect("booking_list")
+#         # messages.success(request, "Booking created successfully!")
+#         # return redirect("booking_list")
 
-    # --- Choose base template based on role ---
-    base_template = (
-        "base.admin.html" if request.user.is_authenticated and request.user.is_superuser
-        else "base.staff.html" if request.user.is_authenticated and request.user.is_staff
-        else "base.user.html" if request.user.is_authenticated
-        else "base.html"
-    )
+#     # --- Choose base template based on role ---
+#     base_template = (
+#         "base.admin.html" if request.user.is_authenticated and request.user.is_superuser
+#         else "base.staff.html" if request.user.is_authenticated and request.user.is_staff
+#         else "base.user.html" if request.user.is_authenticated
+#         else "base.html"
+#     )
 
-    # --- Context for form rendering ---
-    context = {
-        "base_template": base_template,
-        "activities": Activity.objects.all(),
-        "packages": Package.objects.all(),
-        "rooms": Room.objects.all(),
-        "food": Food.objects.all(),
-        "tours": Tour.objects.all(),
-    }
-    return render(request, "booking_create.html", context)
+#     # --- Context for form rendering ---
+#     context = {
+#         "base_template": base_template,
+#         "activities": Activity.objects.all(),
+#         "packages": Package.objects.all(),
+#         "rooms": Room.objects.all(),
+#         "food": Food.objects.all(),
+#         "tours": Tour.objects.all(),
+#     }
+#     return render(request, "booking_create.html", context)
 
 # # view for booking on behalf of another user
 # @login_required
@@ -916,60 +912,60 @@ def create_booking(request):
 #         'food_items': food_items,
 #         'tours': tours,
 #     })
-@login_required
-def admin_create_booking(request):
-    users = User.objects.all().order_by('username')
-    activities = Activity.objects.all()
-    packages = Package.objects.all()
-    rooms = Room.objects.all()
-    food_items = Food.objects.all()
-    tours = Tour.objects.all()
+# @login_required
+# def admin_create_booking(request):
+#     users = User.objects.all().order_by('username')
+#     activities = Activity.objects.all()
+#     packages = Package.objects.all()
+#     rooms = Room.objects.all()
+#     food_items = Food.objects.all()
+#     tours = Tour.objects.all()
 
-    if request.method == "POST":
-        selected_user_id = request.POST.get('user')
-        check_in = request.POST.get('check_in')
-        check_out = request.POST.get('check_out')
-        pax = request.POST.get('pax', 1)
+#     if request.method == "POST":
+#         selected_user_id = request.POST.get('user')
+#         check_in = request.POST.get('check_in')
+#         check_out = request.POST.get('check_out')
+#         pax = request.POST.get('pax', 1)
 
-        # Create the booking linked to a user
-        booking = Booking.objects.create(
-            user=User.objects.get(id=selected_user_id) if selected_user_id else None,
-            check_in=check_in,
-            check_out=check_out,
-            pax=pax,
-        )
+#         # Create the booking linked to a user
+#         booking = Booking.objects.create(
+#             user=User.objects.get(id=selected_user_id) if selected_user_id else None,
+#             check_in=check_in,
+#             check_out=check_out,
+#             pax=pax,
+#         )
 
-        # Set ManyToMany relationships
-        booking.activities.set(request.POST.getlist('activities'))
-        booking.packages.set(request.POST.getlist('packages'))
-        booking.rooms.set(request.POST.getlist('rooms'))
-        booking.food.set(request.POST.getlist('food'))
-        booking.tours.set(request.POST.getlist('tours'))
+#         # Set ManyToMany relationships
+#         booking.activities.set(request.POST.getlist('activities'))
+#         booking.packages.set(request.POST.getlist('packages'))
+#         booking.rooms.set(request.POST.getlist('rooms'))
+#         booking.food.set(request.POST.getlist('food'))
+#         booking.tours.set(request.POST.getlist('tours'))
 
-        # Calculate total amount (example: sum of activities + packages)
-        total_amount = 0
-        for activity in booking.activities.all():
-            total_amount += activity.price_per_person
-        for package in booking.packages.all():
-            total_amount += package.price_per_person
-        for room in booking.rooms.all():
-            total_amount += room.room_type.price_per_night
-        for food in booking.food.all():
-            total_amount += food.price_per_person
-        for tour in booking.tours.all():
-            total_amount += tour.price_per_person
+#         # Calculate total amount (example: sum of activities + packages)
+#         total_amount = 0
+#         for activity in booking.activities.all():
+#             total_amount += activity.price_per_person
+#         for package in booking.packages.all():
+#             total_amount += package.price_per_person
+#         for room in booking.rooms.all():
+#             total_amount += room.room_type.price_per_night
+#         for food in booking.food.all():
+#             total_amount += food.price_per_person
+#         for tour in booking.tours.all():
+#             total_amount += tour.price_per_person
 
-        # Redirect to payment page
-        return redirect('pay_booking', booking_id=booking.id)
+#         # Redirect to payment page
+#         return redirect('pay_booking', booking_id=booking.id)
 
-    return render(request, 'booking.create_for_user.html', {
-        'users': users,
-        'activities': activities,
-        'packages': packages,
-        'rooms': rooms,
-        'food_items': food_items,
-        'tours': tours,
-    })
+#     return render(request, 'booking.create_for_user.html', {
+#         'users': users,
+#         'activities': activities,
+#         'packages': packages,
+#         'rooms': rooms,
+#         'food_items': food_items,
+#         'tours': tours,
+#     })
 
 # @login_required
 # def upcoming_bookings_list(request):
@@ -979,69 +975,345 @@ def admin_create_booking(request):
 #     return render(request, "bookings.upcoming.html", {
 #         "upcoming_bookings": upcoming_bookings
 #     })
-@login_required
-def upcoming_bookings_list(request):
-    upcoming_bookings = Booking.objects.filter(
-        check_in__gte=timezone.now()
-    ).order_by('check_in')
+# @login_required
+# def upcoming_bookings_list(request):
+#     upcoming_bookings = Booking.objects.filter(
+#         check_in__gte=timezone.now()
+#     ).order_by('check_in')
 
-    for booking in upcoming_bookings:
-        details = []
-        if booking.pax_details:
-            for category, data in booking.pax_details.items():
-                ids = data.get('ids', [])
-                pax = data.get('pax', booking.pax)
+#     for booking in upcoming_bookings:
+#         details = []
+#         if booking.pax_details:
+#             for category, data in booking.pax_details.items():
+#                 ids = data.get('ids', [])
+#                 pax = data.get('pax', booking.pax)
 
-                # Get model class dynamically
-                model_map = {
-                    'rooms': Room,
-                    'activities': Activity,
-                    'packages': Package,
-                    'food': Food,
-                    'tours': Tour
-                }
+#                 # Get model class dynamically
+#                 model_map = {
+#                     'rooms': Room,
+#                     'activities': Activity,
+#                     'packages': Package,
+#                     'food': Food,
+#                     'tours': Tour
+#                 }
 
-                ModelClass = model_map.get(category)
-                if ModelClass:
-                    items = ModelClass.objects.filter(id__in=ids)
-                    item_names = ', '.join([item.name for item in items])
-                    details.append(f"{category.title()}: {item_names} (Pax: {pax})")
+#                 ModelClass = model_map.get(category)
+#                 if ModelClass:
+#                     items = ModelClass.objects.filter(id__in=ids)
+#                     item_names = ', '.join([item.name for item in items])
+#                     details.append(f"{category.title()}: {item_names} (Pax: {pax})")
 
-        booking.display_pax_details = details
+#         booking.display_pax_details = details
 
+#     base_template = (
+#         "base.admin.html" if request.user.is_superuser
+#         else "base.staff.html"
+#     )
+
+#     return render(request, "bookings.upcoming.html", {
+#         "upcoming_bookings": upcoming_bookings,
+#         "base_template": base_template
+#     })
+
+
+
+# @login_required
+# def booking_list(request):
+#     bookings = (
+#         Booking.objects
+#         .select_related('user')
+#         .prefetch_related('activities', 'packages', 'rooms', 'food', 'tours')
+#         .order_by('-created_at')
+#     )
+
+#     if request.user.is_superuser:
+#         editable_ids = bookings.values_list('id', flat=True)
+#         base_template = 'base.admin.html'
+#         template_name = 'bookings.html'  # Table for superusers
+#     elif request.user.is_staff:
+#         editable_ids = bookings.filter(user=request.user).values_list('id', flat=True)
+#         base_template = 'base.staff.html'
+#         template_name = 'bookings.html'  # Table for staff
+#     else:
+#         bookings = bookings.filter(user=request.user)
+#         editable_ids = bookings.values_list('id', flat=True)
+#         base_template = 'base.user.html'
+#         template_name = 'bookings.users.html'  # Cards for normal users
+
+#     return render(request, template_name, {
+#         'bookings': bookings,
+#         'editable_ids': set(editable_ids),
+#         'base_template': base_template,
+#     })
+
+
+# # Edit booking with validations
+# @login_required(login_url='login')
+# def edit_booking(request, pk):
+#     booking = get_object_or_404(Booking, pk=pk)
+
+#     # Restrict: Only superusers or the booking owner can edit
+#     if not request.user.is_superuser and booking.user != request.user:
+#         messages.error(request, "You do not have permission to edit this booking.")
+#         return redirect('booking_list')
+
+#     if request.method == "POST":
+#         check_in = request.POST.get("check_in")
+#         check_out = request.POST.get("check_out")
+#         guests = int(request.POST.get("guests", 1))
+#         selected_room_ids = request.POST.getlist("rooms")
+
+#         # Validate dates
+#         if check_in > check_out:
+#             messages.error(request, "Check-out date must be after check-in.")
+#             return redirect("edit_booking", pk=booking.pk)
+
+#         # Validate room availability
+#         for room_id in selected_room_ids:
+#             room = get_object_or_404(Room, id=room_id)
+#             overlapping = Booking.objects.filter(
+#                 rooms=room,
+#                 check_in__lt=check_out,
+#                 check_out__gt=check_in
+#             ).exclude(id=booking.id).count()
+
+#             if overlapping >= room.room_type.total_rooms:
+#                 messages.error(
+#                     request,
+#                     f"Room '{room.name}' is fully booked for the selected dates."
+#                 )
+#                 return redirect("edit_booking", pk=booking.pk)
+
+#         # Update booking details
+#         booking.check_in = check_in
+#         booking.check_out = check_out
+#         booking.guests = guests
+#         booking.activities.set(request.POST.getlist("activities"))
+#         booking.packages.set(request.POST.getlist("packages"))
+#         booking.rooms.set(selected_room_ids)
+#         booking.food.set(request.POST.getlist("food"))
+#         booking.tours.set(request.POST.getlist("tours"))
+#         booking.save()
+
+#         messages.success(request, "Booking updated successfully!")
+#         return redirect("booking_list")
+
+#     # Role-based base template selection
+#     if request.user.is_superuser:
+#         base_template = "base.admin.html"
+#     elif request.user.groups.filter(name="Staff").exists():
+#         base_template = "base.staff.html"
+#     else:
+#         base_template = "base.user.html"
+
+#     # Pass all required data
+#     context = {
+#         "booking": booking,
+#         "activities": Activity.objects.all(),
+#         "packages": Package.objects.all(),
+#         "rooms": Room.objects.all(),
+#         "food": Food.objects.all(),
+#         "tours": Tour.objects.all(),
+#         "base_template": base_template,  # 🔑 Fix: Add base_template
+#     }
+#     return render(request, "booking_edit.html", context)
+
+
+# @login_required(login_url='login')
+# def delete_booking(request, pk):
+#     booking = get_object_or_404(Booking, pk=pk)
+
+#     # Restrict: Only superusers or the booking owner can delete
+#     if not request.user.is_superuser and booking.user != request.user:
+#         messages.error(request, "You do not have permission to delete this booking.")
+#         return redirect('booking_list')
+
+#     booking.delete()
+#     messages.success(request, "Booking deleted successfully!")
+#     return redirect('booking_list')
+
+
+
+
+# --------------------------
+# Create Booking
+# --------------------------
+def create_booking(request):
+    if request.method == "POST":
+        # Customer details
+        customer_name = request.user.username if request.user.is_authenticated else request.POST.get("customer_name")
+        customer_email = request.user.email if request.user.is_authenticated else request.POST.get("customer_email")
+
+        booking_check_in = request.POST.get("check_in")
+        booking_check_out = request.POST.get("check_out")
+        booking_pax = int(request.POST.get("pax", 1))
+
+        selected_room_ids = request.POST.getlist("rooms")
+        selected_package_ids = request.POST.getlist("packages")
+        selected_activity_ids = request.POST.getlist("activities")
+        selected_food_ids = request.POST.getlist("food")
+        selected_tour_ids = request.POST.getlist("tours")
+
+        # Validate dates
+        if not booking_check_in or not booking_check_out:
+            messages.error(request, "Please select both check-in and check-out dates.")
+            return redirect("create_booking")
+
+        if booking_check_out < booking_check_in:
+            messages.error(request, "Check-out date cannot be before check-in.")
+            return redirect("create_booking")
+
+        # Validate room availability
+        for room_id in selected_room_ids:
+            room = get_object_or_404(Room, id=room_id)
+            overlapping = Booking.objects.filter(
+                booking_rooms=room,
+                booking_check_in__lt=booking_check_out,
+                booking_check_out__gt=booking_check_in
+            ).count()
+            if overlapping >= room.room_room_type.roomType_total_rooms:
+                messages.error(request, f"Room '{room.room_name}' is fully booked for the selected dates.")
+                return redirect("create_booking")
+
+        # Role-based restrictions
+        if not (request.user.is_staff or request.user.is_superuser):
+            selected_activity_ids = []
+            selected_food_ids = []
+            selected_tour_ids = []
+
+        # Collect per-item pax values
+        booking_pax_details = {}
+
+        activities_pax = int(request.POST.get("activities_pax", 1))
+        if selected_activity_ids:
+            booking_pax_details['activities'] = {'ids': selected_activity_ids, 'pax': activities_pax}
+
+        packages_pax = int(request.POST.get("packages_pax", 1))
+        if selected_package_ids:
+            booking_pax_details['packages'] = {'ids': selected_package_ids, 'pax': packages_pax}
+
+        rooms_pax = int(request.POST.get("rooms_pax", 1))
+        if selected_room_ids:
+            booking_pax_details['rooms'] = {'ids': selected_room_ids, 'pax': rooms_pax}
+
+        food_pax = int(request.POST.get("food_pax", 1))
+        if selected_food_ids:
+            booking_pax_details['food'] = {'ids': selected_food_ids, 'pax': food_pax}
+
+        tours_pax = int(request.POST.get("tours_pax", 1))
+        if selected_tour_ids:
+            booking_pax_details['tours'] = {'ids': selected_tour_ids, 'pax': tours_pax}
+
+        # Create booking
+        booking = Booking.objects.create(
+            booking_user=request.user if request.user.is_authenticated else None,
+            booking_customer_name=customer_name,
+            booking_customer_email=customer_email,
+            booking_check_in=booking_check_in,
+            booking_check_out=booking_check_out,
+            booking_pax=booking_pax,
+            booking_pax_details=booking_pax_details
+        )
+
+        # Set ManyToMany relationships
+        booking.booking_rooms.set(selected_room_ids)
+        booking.booking_packages.set(selected_package_ids)
+        booking.booking_activities.set(selected_activity_ids)
+        booking.booking_food.set(selected_food_ids)
+        booking.booking_tours.set(selected_tour_ids)
+
+        messages.success(request, "Booking created successfully!")
+        return redirect("pay_booking", booking_id=booking.id)
+
+    # Choose base template dynamically
     base_template = (
         "base.admin.html" if request.user.is_superuser
-        else "base.staff.html"
+        else "base.staff.html" if request.user.is_staff
+        else "base.user.html" if request.user.is_authenticated
+        else "base.html"
     )
 
-    return render(request, "bookings.upcoming.html", {
-        "upcoming_bookings": upcoming_bookings,
-        "base_template": base_template
+    context = {
+        "base_template": base_template,
+        "activities": Activity.objects.all(),
+        "packages": Package.objects.all(),
+        "rooms": Room.objects.all(),
+        "food": Food.objects.all(),
+        "tours": Tour.objects.all(),
+    }
+
+    return render(request, "booking_create.html", context)
+
+
+# --------------------------
+# Admin Create Booking for Users
+# --------------------------
+@login_required
+def admin_create_booking(request):
+    users = User.objects.all().order_by("username")
+    activities = Activity.objects.all()
+    packages = Package.objects.all()
+    rooms = Room.objects.all()
+    food_items = Food.objects.all()
+    tours = Tour.objects.all()
+
+    if request.method == "POST":
+        selected_user_id = request.POST.get("user")
+        booking_check_in = request.POST.get("check_in")
+        booking_check_out = request.POST.get("check_out")
+        booking_pax = int(request.POST.get("pax", 1))
+
+        booking = Booking.objects.create(
+            booking_user=User.objects.get(id=selected_user_id) if selected_user_id else None,
+            booking_check_in=booking_check_in,
+            booking_check_out=booking_check_out,
+            booking_pax=booking_pax
+        )
+
+        # Set ManyToMany relationships
+        booking.booking_activities.set(request.POST.getlist("activities"))
+        booking.booking_packages.set(request.POST.getlist("packages"))
+        booking.booking_rooms.set(request.POST.getlist("rooms"))
+        booking.booking_food.set(request.POST.getlist("food"))
+        booking.booking_tours.set(request.POST.getlist("tours"))
+
+        messages.success(request, "Booking created for user successfully!")
+        return redirect("booking_list")
+
+    return render(request, "booking_create_for_user.html", {
+        "users": users,
+        "activities": activities,
+        "packages": packages,
+        "rooms": rooms,
+        "food_items": food_items,
+        "tours": tours
     })
 
-# booking payment view
+# --------------------------
+# Bookings Payment
+# --------------------------
 def pay_booking(request, booking_id):
     booking = get_object_or_404(Booking, id=booking_id)
 
     if request.method == "POST":
         phone = request.POST.get("phone")
-        amount = booking.total_amount  # ensure total_amount is stored/calculated
+        amount = booking.amount_required  # use your model property
 
+        # Initiate STK push
         result = initiate_stk_push(phone, amount)
 
-        # Optional: Log result or handle failure here
         if result.get("ResponseCode") == "0":
-            messages.success(request, "STK Push initiated successfully! Please complete the payment on your phone.")
+            messages.success(request, "STK Push initiated successfully! Complete the payment on your phone.")
         else:
             messages.error(request, f"Payment initiation failed: {result.get('errorMessage', 'Unknown error')}")
 
-        return redirect("booking_list")  # redirect user to bookings list after initiating payment
+        return redirect("booking_list")  # redirect after initiating payment
 
-    # Dynamic base template
+    # Select base template dynamically
     base_template = (
         "base.admin.html" if request.user.is_superuser
         else "base.staff.html" if request.user.is_staff
-        else "base.user.html" if not request.user.is_staff or request.user.is_superuser
+        else "base.user.html" if request.user.is_authenticated
         else "base.html"
     )
 
@@ -1050,55 +1322,99 @@ def pay_booking(request, booking_id):
         "base_template": base_template,
         "navbar": "stk"
     })
-
+# --------------------------
+# Upcoming Bookings
+# --------------------------
 @login_required
-def booking_list(request):
-    bookings = (
-        Booking.objects
-        .select_related('user')
-        .prefetch_related('activities', 'packages', 'rooms', 'food', 'tours')
-        .order_by('-created_at')
-    )
+def upcoming_bookings_list(request):
+    upcoming_bookings = Booking.objects.filter(
+        booking_check_in__gte=timezone.now()
+    ).order_by("booking_check_in")
 
-    if request.user.is_superuser:
-        editable_ids = bookings.values_list('id', flat=True)
-        base_template = 'base.admin.html'
-        template_name = 'bookings.html'  # Table for superusers
-    elif request.user.is_staff:
-        editable_ids = bookings.filter(user=request.user).values_list('id', flat=True)
-        base_template = 'base.staff.html'
-        template_name = 'bookings.html'  # Table for staff
-    else:
-        bookings = bookings.filter(user=request.user)
-        editable_ids = bookings.values_list('id', flat=True)
-        base_template = 'base.user.html'
-        template_name = 'bookings.users.html'  # Cards for normal users
+    # Add display_pax_details
+    for booking in upcoming_bookings:
+        details = []
+        if booking.booking_pax_details:
+            for category, data in booking.booking_pax_details.items():
+                ids = data.get("ids", [])
+                pax = data.get("pax", booking.booking_pax)
+                model_map = {
+                    "rooms": Room,
+                    "activities": Activity,
+                    "packages": Package,
+                    "food": Food,
+                    "tours": Tour
+                }
+                ModelClass = model_map.get(category)
+                if ModelClass:
+                    items = ModelClass.objects.filter(id__in=ids)
+                    item_names = ", ".join([getattr(item, f"{category[:-1]}_name", str(item)) for item in items])
+                    details.append(f"{category.title()}: {item_names} (Pax: {pax})")
+        booking.display_pax_details = details
 
-    return render(request, template_name, {
-        'bookings': bookings,
-        'editable_ids': set(editable_ids),
-        'base_template': base_template,
+    base_template = "base.admin.html" if request.user.is_superuser else "base.staff.html"
+
+    return render(request, "bookings_upcoming.html", {
+        "upcoming_bookings": upcoming_bookings,
+        "base_template": base_template
     })
 
 
-# Edit booking with validations
-@login_required(login_url='login')
+# --------------------------
+# Booking List
+# --------------------------
+@login_required
+def booking_list(request):
+    bookings = Booking.objects.prefetch_related(
+        "booking_rooms",
+        "booking_activities",
+        "booking_packages",
+        "booking_food",
+        "booking_tours"
+    ).order_by("-booking_created_at")
+
+    if request.user.is_superuser:
+        editable_ids = bookings.values_list("id", flat=True)
+        base_template = "base.admin.html"
+        template_name = "bookings.html"
+    elif request.user.is_staff:
+        bookings = bookings.filter(booking_user=request.user)
+        editable_ids = bookings.values_list("id", flat=True)
+        base_template = "base.staff.html"
+        template_name = "bookings.html"
+    else:
+        bookings = bookings.filter(booking_user=request.user)
+        editable_ids = bookings.values_list("id", flat=True)
+        base_template = "base.user.html"
+        template_name = "bookings_users.html"
+
+    return render(request, template_name, {
+        "bookings": bookings,
+        "editable_ids": set(editable_ids),
+        "base_template": base_template
+    })
+
+
+# --------------------------
+# Edit Booking
+# --------------------------
+@login_required
 def edit_booking(request, pk):
     booking = get_object_or_404(Booking, pk=pk)
 
-    # Restrict: Only superusers or the booking owner can edit
-    if not request.user.is_superuser and booking.user != request.user:
+    # Permission
+    if not request.user.is_superuser and booking.booking_user != request.user:
         messages.error(request, "You do not have permission to edit this booking.")
-        return redirect('booking_list')
+        return redirect("booking_list")
 
     if request.method == "POST":
-        check_in = request.POST.get("check_in")
-        check_out = request.POST.get("check_out")
-        guests = int(request.POST.get("guests", 1))
+        booking_check_in = request.POST.get("check_in")
+        booking_check_out = request.POST.get("check_out")
+        booking_pax = int(request.POST.get("pax", 1))
         selected_room_ids = request.POST.getlist("rooms")
 
         # Validate dates
-        if check_in > check_out:
+        if booking_check_out < booking_check_in:
             messages.error(request, "Check-out date must be after check-in.")
             return redirect("edit_booking", pk=booking.pk)
 
@@ -1106,65 +1422,66 @@ def edit_booking(request, pk):
         for room_id in selected_room_ids:
             room = get_object_or_404(Room, id=room_id)
             overlapping = Booking.objects.filter(
-                rooms=room,
-                check_in__lt=check_out,
-                check_out__gt=check_in
+                booking_rooms=room,
+                booking_check_in__lt=booking_check_out,
+                booking_check_out__gt=booking_check_in
             ).exclude(id=booking.id).count()
-
-            if overlapping >= room.room_type.total_rooms:
-                messages.error(
-                    request,
-                    f"Room '{room.name}' is fully booked for the selected dates."
-                )
+            if overlapping >= room.room_room_type.roomType_total_rooms:
+                messages.error(request, f"Room '{room.room_name}' is fully booked for the selected dates.")
                 return redirect("edit_booking", pk=booking.pk)
 
-        # Update booking details
-        booking.check_in = check_in
-        booking.check_out = check_out
-        booking.guests = guests
-        booking.activities.set(request.POST.getlist("activities"))
-        booking.packages.set(request.POST.getlist("packages"))
-        booking.rooms.set(selected_room_ids)
-        booking.food.set(request.POST.getlist("food"))
-        booking.tours.set(request.POST.getlist("tours"))
+        # Update booking
+        booking.booking_check_in = booking_check_in
+        booking.booking_check_out = booking_check_out
+        booking.booking_pax = booking_pax
+        booking.booking_rooms.set(selected_room_ids)
+        booking.booking_packages.set(request.POST.getlist("packages"))
+        booking.booking_activities.set(request.POST.getlist("activities"))
+        booking.booking_food.set(request.POST.getlist("food"))
+        booking.booking_tours.set(request.POST.getlist("tours"))
         booking.save()
 
         messages.success(request, "Booking updated successfully!")
         return redirect("booking_list")
 
-    # Role-based base template selection
-    if request.user.is_superuser:
-        base_template = "base.admin.html"
-    elif request.user.groups.filter(name="Staff").exists():
-        base_template = "base.staff.html"
-    else:
-        base_template = "base.user.html"
+    # Base template
+    base_template = (
+        "base.admin.html" if request.user.is_superuser
+        else "base.staff.html"
+        if request.user.groups.filter(name="Staff").exists()
+        else "base.user.html"
+    )
 
-    # Pass all required data
-    context = {
+    return render(request, "booking_edit.html", {
         "booking": booking,
         "activities": Activity.objects.all(),
         "packages": Package.objects.all(),
         "rooms": Room.objects.all(),
         "food": Food.objects.all(),
         "tours": Tour.objects.all(),
-        "base_template": base_template,  # 🔑 Fix: Add base_template
-    }
-    return render(request, "booking_edit.html", context)
+        "base_template": base_template
+    })
 
 
-@login_required(login_url='login')
+# --------------------------
+# Delete Booking
+# --------------------------
+@login_required
 def delete_booking(request, pk):
     booking = get_object_or_404(Booking, pk=pk)
 
-    # Restrict: Only superusers or the booking owner can delete
-    if not request.user.is_superuser and booking.user != request.user:
+    # Permission
+    if not request.user.is_superuser and booking.booking_user != request.user:
         messages.error(request, "You do not have permission to delete this booking.")
-        return redirect('booking_list')
+        return redirect("booking_list")
 
     booking.delete()
     messages.success(request, "Booking deleted successfully!")
-    return redirect('booking_list')
+    return redirect("booking_list")
+
+
+
+
 
 
 @login_required

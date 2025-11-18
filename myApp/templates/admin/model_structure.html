@@ -1,0 +1,39 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<h1>Model Structure Viewer</h1>
+<!-- <p>This page shows all models grouped by app, including fields, types, PKs, and relations.</p> -->
+
+<style>
+    .app-box { margin-bottom: 30px; padding: 15px; border: 1px solid #ddd; border-radius: 10px; }
+    .model-box { margin: 15px 0; padding: 10px; background: #f8f9fa; border-radius: 8px; }
+    .field-list { color: #111; padding-left: 20px; }
+    .pk-field { color: green; font-weight: bold; }
+    .rel-field { color: #555; font-style: italic; }
+    h3 { color: #111;}
+</style>
+
+{% for app, models in app_groups.items %}
+    <div class="app-box">
+        <h2>📁 App: {{ app }}</h2>
+
+        {% for m in models %}
+            <div class="model-box">
+                <h3>📄 Model: {{ m.model_name }}</h3>
+                <ul class="field-list">
+                    {% for f in m.fields %}
+                        <li>
+                            <strong>{{ f.name }}</strong>
+                            — {{ f.type }}
+                            {% if f.pk %}<span class="pk-field">{{ f.pk }}</span>{% endif %}
+                            {% if f.rel %}<span class="rel-field">{{ f.rel }}</span>{% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endfor %}
+    </div>
+{% endfor %}
+
+{% endblock %}

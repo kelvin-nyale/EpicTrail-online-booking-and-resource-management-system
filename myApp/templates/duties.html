@@ -8,6 +8,7 @@
             <tr>
                 <th>Staff</th>
                 <th>Title</th>
+                <th>Description</th>
                 <th>Due Date</th>
                 <th>Status</th>
             </tr>
@@ -17,6 +18,8 @@
             <tr>
                 <td>{{ duty.staff.username }}</td>
                 <td>{{ duty.title }}</td>
+                <td>{% if duty.description %} {{ duty.description }} {% else %} No description {% endif %}</td>
+                <!-- <td>{{ duty.description }}</td> -->
                 <td>{{ duty.due_date }}</td>
                 <td>
                     {% if duty.completed %}
