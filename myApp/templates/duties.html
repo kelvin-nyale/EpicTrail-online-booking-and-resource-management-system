@@ -1,7 +1,8 @@
-{% extends "base.admin.html" %} {% block title %}Duties{% endblock %} {% block content %}
+{% extends "base.admin.html" %} 
+{% block title %}Duties{% endblock %} 
+{% block content %}
 <a href="{% url 'assign_duty' %}" class="btn btn-outline-primary mb-3">+ Assign New Duty</a>
 <div class="card p-4 shadow-sm">
-    <!-- <a href="{% url 'assign_duty' %}" class="btn btn-primary mb-3">Assign New Duty</a> -->
     <h4 class="text-secondary mb-3">Assigned Duties</h4>
     <table class="table table-striped">
         <thead>
@@ -11,20 +12,22 @@
                 <th>Description</th>
                 <th>Due Date</th>
                 <th>Status</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody>
             {% for duty in duties %}
             <tr>
-                <td>{{ duty.staff.username }}</td>
-                <td>{{ duty.title }}</td>
-                <td>{% if duty.description %} {{ duty.description }} {% else %} No description {% endif %}</td>
-                <!-- <td>{{ duty.description }}</td> -->
-                <td>{{ duty.due_date }}</td>
+                <td>{{ duty.duty_staff.username }}</td>
+                <td>{{ duty.duty_title }}</td>
+                <td>{% if duty.duty_description %}{{ duty.duty_description }}{% else %}No description{% endif %}</td>
+                <td>{{ duty.duty_due_date|date:"M d, Y" }}</td>
                 <td>
-                    {% if duty.completed %}
-                    <span class="badge bg-success">Completed</span> {% else %}
-                    <span class="badge bg-warning text-dark">Pending</span> {% endif %}
+                    {% if duty.duty_completed %}
+                    <span class="badge bg-success">Completed</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark">Pending</span>
+                    {% endif %}
                 </td>
                 <td>
                     <a href="{% url 'update_duty_status' duty.id %}" class="btn btn-sm btn-outline-primary">Update</a>
@@ -32,7 +35,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="4" class="text-center">No duties assigned yet.</td>
+                <td colspan="6" class="text-center">No duties assigned yet.</td>
             </tr>
             {% endfor %}
         </tbody>

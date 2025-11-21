@@ -1,71 +1,73 @@
-{% extends 'base.admin.html' %} {% block title %}Reports & Analytics{% endblock %} {% block content %}
+{% extends 'base.admin.html' %}
+{% block title %}Reports & Analytics{% endblock %}
+{% block content %}
 <div class="container">
-    <div class="d-flex justify-content-between align-items-center mt-3 mb-4">
+    <div class="d-flex justify-content-between align-items-center mt-3 mb-4 flex-wrap">
         <h2>Reports & Analytics</h2>
-        <div>
-            <a href="?export=csv" class="btn btn-secondary me-2">
-                <i class="fas fa-file-csv me-1"></i>Export CSV</a>
-            <a href="?export=pdf" class="btn btn-danger me-2" target="_blank">
-                <i class="fas fa-file-pdf me-1"></i>Export PDF</a>
+        <div class="mt-2 mt-md-0">
+            <a href="?export=csv" class="btn btn-secondary me-2 mb-2 mb-md-0">
+                <i class="fas fa-file-csv me-1"></i>Export CSV
+            </a>
+            <a href="?export=pdf" class="btn btn-danger me-2 mb-2 mb-md-0" target="_blank">
+                <i class="fas fa-file-pdf me-1"></i>Export PDF
+            </a>
             <button class="btn btn-primary" onclick="window.print()">
-                <i class="fas fa-print me-2"></i>Print</button>
+                <i class="fas fa-print me-2"></i>Print
+            </button>
         </div>
     </div>
 
     <!-- Summary Cards -->
     <div class="row mb-4">
-        <div class="col-md-3">
+        <div class="col-6 col-md-3 mb-3">
             <div class="card p-3 shadow-sm text-center">
                 <h6>Total Revenue - Activities</h6>
-                <p class="fs-5 fw-bold">KSh {{ revenue_activities }}</p>
+                <p class="fs-5 fw-bold">KSh {{ revenue_activities|floatformat:2 }}</p>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-6 col-md-3 mb-3">
             <div class="card p-3 shadow-sm text-center">
                 <h6>Total Revenue - Packages</h6>
-                <p class="fs-5 fw-bold">KSh {{ revenue_packages }}</p>
+                <p class="fs-5 fw-bold">KSh {{ revenue_packages|floatformat:2 }}</p>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-6 col-md-3 mb-3">
             <div class="card p-3 shadow-sm text-center">
                 <h6>Total Revenue - Rooms</h6>
-                <p class="fs-5 fw-bold">KSh {{ revenue_rooms }}</p>
+                <p class="fs-5 fw-bold">KSh {{ revenue_rooms|floatformat:2 }}</p>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-6 col-md-3 mb-3">
             <div class="card p-3 shadow-sm text-center">
                 <h6>Total Revenue - Tours</h6>
-                <p class="fs-5 fw-bold">KSh {{ revenue_tours }}</p>
+                <p class="fs-5 fw-bold">KSh {{ revenue_tours|floatformat:2 }}</p>
             </div>
         </div>
     </div>
 
     <div class="row mb-4">
-        <div class="col-md-3">
+        <div class="col-6 col-md-3 mb-3">
             <div class="card p-3 shadow-sm text-center">
                 <i class="fas fa-book fa-2x text-primary mb-2"></i>
                 <h6>Total Bookings</h6>
                 <p class="fs-5 fw-bold">{{ total_bookings }}</p>
             </div>
         </div>
-
-        <div class="col-md-3">
+        <div class="col-6 col-md-3 mb-3">
             <div class="card p-3 shadow-sm text-center">
                 <i class="fas fa-coins fa-2x text-success mb-2"></i>
                 <h6>Total Revenue - Bookings</h6>
                 <p class="fs-5 fw-bold">KSh {{ total_revenue|floatformat:2 }}</p>
             </div>
         </div>
-
-        <div class="col-md-3">
+        <div class="col-6 col-md-3 mb-3">
             <div class="card p-3 shadow-sm text-center">
                 <i class="fas fa-utensils fa-2x text-warning mb-2"></i>
                 <h6>Food Orders</h6>
                 <p class="fs-5 fw-bold">{{ total_orders }}</p>
             </div>
         </div>
-
-        <div class="col-md-3">
+        <div class="col-6 col-md-3 mb-3">
             <div class="card p-3 shadow-sm text-center">
                 <i class="fas fa-cash-register fa-2x text-danger mb-2"></i>
                 <h6>Food Orders Revenue</h6>
@@ -91,13 +93,15 @@
             </div>
         </div>
     </div>
+
     <hr>
+
     <!-- Top Lists -->
     <h4>Top Activities</h4>
     <ul class="list-group mb-3">
         {% for a in popular_activities %}
         <li class="list-group-item d-flex justify-content-between">
-            {{ a.name }}<span class="badge bg-primary">{{ a.num_bookings }}</span>
+            {{ a.activity_name }}<span class="badge bg-primary">{{ a.num_bookings }}</span>
         </li>
         {% empty %}
         <li class="list-group-item">No data.</li>
@@ -108,7 +112,7 @@
     <ul class="list-group mb-3">
         {% for p in popular_packages %}
         <li class="list-group-item d-flex justify-content-between">
-            {{ p.name }}<span class="badge bg-success">{{ p.num_bookings }}</span>
+            {{ p.package_name }}<span class="badge bg-success">{{ p.num_bookings }}</span>
         </li>
         {% empty %}
         <li class="list-group-item">No data.</li>
@@ -119,7 +123,7 @@
     <ul class="list-group mb-3">
         {% for r in popular_rooms %}
         <li class="list-group-item d-flex justify-content-between">
-            {{ r.name }}<span class="badge bg-warning text-dark">{{ r.num_bookings }}</span>
+            {{ r.room_name }}<span class="badge bg-warning text-dark">{{ r.num_bookings }}</span>
         </li>
         {% empty %}
         <li class="list-group-item">No data.</li>
@@ -130,7 +134,7 @@
     <ul class="list-group mb-3">
         {% for t in popular_tours %}
         <li class="list-group-item d-flex justify-content-between">
-            {{ t.name }}<span class="badge bg-info">{{ t.num_bookings }}</span>
+            {{ t.tour_name }}<span class="badge bg-info">{{ t.num_bookings }}</span>
         </li>
         {% empty %}
         <li class="list-group-item">No data.</li>
@@ -139,91 +143,87 @@
 </div>
 
 <!-- JSON data for charts -->
-{{ months|json_script:"months-data" }} {{ monthly_bookings|json_script:"bookings-data" }} {{ monthly_revenue|json_script:"revenue-data" }} {{ pie_labels|json_script:"pie-labels" }} {{ pie_data|json_script:"pie-data" }}
+{{ months|json_script:"months-data" }}
+{{ monthly_bookings|json_script:"bookings-data" }}
+{{ monthly_revenue|json_script:"revenue-data" }}
+{{ pie_labels|json_script:"pie-labels" }}
+{{ pie_data|json_script:"pie-data" }}
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const months = JSON.parse(document.getElementById('months-data').textContent);
-    const bookingsData = JSON.parse(document.getElementById('bookings-data').textContent);
-    const revenueData = JSON.parse(document.getElementById('revenue-data').textContent);
-    const pieLabels = JSON.parse(document.getElementById('pie-labels').textContent);
-    const pieData = JSON.parse(document.getElementById('pie-data').textContent);
+const months = JSON.parse(document.getElementById('months-data').textContent);
+const bookingsData = JSON.parse(document.getElementById('bookings-data').textContent);
+const revenueData = JSON.parse(document.getElementById('revenue-data').textContent);
+const pieLabels = JSON.parse(document.getElementById('pie-labels').textContent);
+const pieData = JSON.parse(document.getElementById('pie-data').textContent);
 
-    // --- BAR CHART ---
-    new Chart(document.getElementById('barChart'), {
-        type: 'bar',
-        data: {
-            labels: months,
-            datasets: [{
+// --- BAR CHART ---
+new Chart(document.getElementById('barChart'), {
+    type: 'bar',
+    data: {
+        labels: months,
+        datasets: [
+            {
                 label: 'Bookings',
                 data: bookingsData,
                 backgroundColor: 'rgba(54,162,235,0.6)',
                 borderColor: 'rgba(54,162,235,1)',
                 borderWidth: 1
-            }, {
+            },
+            {
                 label: 'Revenue (KSh)',
                 data: revenueData,
                 backgroundColor: 'rgba(75,192,192,0.6)',
                 borderColor: 'rgba(75,192,192,1)',
                 borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'top'
-                },
-                title: {
-                    display: true,
-                    text: 'Monthly Bookings & Revenue'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            if (context.dataset.label === 'Revenue (KSh)') {
-                                return `${context.dataset.label}: KSh ${context.parsed.y.toLocaleString()}`;
-                            } else {
-                                return `${context.dataset.label}: ${context.parsed.y}`;
-                            }
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: { position: 'top' },
+            title: { display: true, text: 'Monthly Bookings & Revenue' },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        if (context.dataset.label === 'Revenue (KSh)') {
+                            return `${context.dataset.label}: KSh ${context.parsed.y.toLocaleString()}`;
+                        } else {
+                            return `${context.dataset.label}: ${context.parsed.y}`;
                         }
                     }
                 }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
             }
-        }
-    });
+        },
+        scales: { y: { beginAtZero: true } }
+    }
+});
 
-    // --- PIE CHART ---
-    new Chart(document.getElementById('pieChart'), {
-        type: 'pie',
-        data: {
-            labels: pieLabels,
-            datasets: [{
-                data: pieData,
-                backgroundColor: ['#36A2EB', '#FF6384', '#FFCE56', '#4BC0C0', '#9966FF']
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Revenue Distribution by Category'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return `${context.label}: KSh ${context.parsed.toLocaleString()}`;
-                        }
+// --- PIE CHART ---
+new Chart(document.getElementById('pieChart'), {
+    type: 'pie',
+    data: {
+        labels: pieLabels,
+        datasets: [{
+            data: pieData,
+            backgroundColor: ['#36A2EB', '#FF6384', '#FFCE56', '#4BC0C0', '#9966FF']
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            title: { display: true, text: 'Revenue Distribution by Category' },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return `${context.label}: KSh ${context.parsed.toLocaleString()}`;
                     }
                 }
             }
         }
-    });
+    }
+});
 </script>
 {% endblock %}

@@ -4,11 +4,11 @@
     {% csrf_token %}
     <div class="mb-3">
         <label>Name</label>
-        <input type="text" name="name" class="form-control" value="{{ food.name }}" required>
+        <input type="text" name="food_name" class="form-control" value="{{ food.food_name }}" required>
     </div>
     <div class="mb-3">
         <label>Price (KES)</label>
-        <input type="number" name="price_per_person" step="0.01" class="form-control" value="{{ food.price_per_person }}" required>
+        <input type="number" name="food_price_per_person" step="0.01" class="form-control" value="{{ food.food_price_per_person }}" required>
     </div>
     <button type="submit" class="btn btn-primary">Update</button>
     <a href="{% url 'food_list' %}" class="btn btn-secondary">Cancel</a>

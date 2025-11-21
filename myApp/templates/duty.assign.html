@@ -5,7 +5,7 @@
         {% csrf_token %}
         <div class="mb-3">
             <label class="form-label">Select Staff</label>
-            <select name="staff" class="form-select" required>
+            <select name="duty_staff" class="form-select" required>
         <option value="">-- Choose Staff Member --</option>
         {% for member in staff_members %}
         <option value="{{ member.id }}">{{ member.username }} ({{ member.email }})</option>
@@ -14,15 +14,15 @@
         </div>
         <div class="mb-3">
             <label class="form-label">Duty Title</label>
-            <input type="text" name="title" class="form-control" placeholder="Enter duty title" required>
+            <input type="text" name="duty_title" class="form-control" placeholder="Enter duty title" required>
         </div>
         <div class="mb-3">
             <label class="form-label">Description</label>
-            <textarea name="description" class="form-control" placeholder="Optional details"></textarea>
+            <textarea name="duty_description" class="form-control" placeholder="Optional details"></textarea>
         </div>
         <div class="mb-3">
             <label class="form-label">Due Date</label>
-            <input type="date" name="due_date" class="form-control" required>
+            <input type="date" name="duty_due_date" class="form-control" required>
         </div>
         <button type="submit" class="btn btn-success w-100">Assign Duty</button>
         <a href="{% url 'duties' %}" class="btn btn-secondary mt-3">Cancel</a>

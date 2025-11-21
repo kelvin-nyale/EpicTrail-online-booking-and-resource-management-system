@@ -35,7 +35,7 @@ urlpatterns = [
     path('tours/', views.tours, name='tours'),
     path('tours/add/', views.add_tour, name='add_tour'),
     path('tour/edit/<int:pk>/', views.edit_tour, name='edit_tour'),
-    path('tour/deelete/<int:pk>/', views.delete_tour, name='delete_tour'),
+    path('tour/delete/<int:pk>/', views.delete_tour, name='delete_tour'),
     
     path('rooms/', views.list_rooms, name='list_rooms'),
     path('rooms/add/', views.add_room, name='add_room'),
@@ -59,6 +59,8 @@ urlpatterns = [
     path('bookings/delete/<int:pk>/', views.delete_booking, name='delete_booking'),
     path('bookings/new/', views.create_booking, name='create_booking'),
     path('bookings/new/for-user/', views.admin_create_booking, name='create_user_booking'),  # booking on behalf of user
+    path("bookings/staff/", views.staff_bookings, name="staff_bookings"),
+    path('print_bookings/', views.print_bookings, name='print_bookings'),
 
     
     path('menu/', views.food_menu, name='food_menu'),
@@ -69,7 +71,12 @@ urlpatterns = [
     path('update-order/<int:order_id>/', views.update_order, name='update_order'),
     path('cancel-order/<int:order_id>/', views.cancel_order, name='cancel_order'),
     path('manage-orders/', views.manage_orders, name='manage_orders'),
+    path('place-order-admin/', views.place_order_admin, name='place_order_admin'),
+    path('print_orders/', views.print_orders, name='print_orders'),
+    path('orders/update/<int:order_id>/', views.update_order_admin, name='update_order_admin'),
+    path('orders/delete/<int:order_id>/', views.delete_order_admin, name='delete_order_admin'),
     path('update-order-status/<int:order_id>/', views.update_order_status, name='update_order_status'),
+    path('my-orders/<int:order_id>/download/', views.download_order_receipt, name='download_order_receipt'),
     
     path('notifications/', notifications_view, name='notifications'),
     path('notifications/<int:pk>/read/', mark_notification_read, name='mark_notification_read'),

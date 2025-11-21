@@ -1,30 +1,53 @@
-{% extends 'base.admin.html' %} {% block title %}Add Room{% endblock %} {% block content %}
+{% extends 'base.admin.html' %} 
+
+{% block title %}Add Room{% endblock %} 
+
+{% block content %}
 <div class="card shadow-sm p-4">
     <h2 class="mb-4">Add Room</h2>
+
+    {% comment %} Display Django messages (success, error, etc.) {% endcomment %}
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
 
-        <!-- Room Name -->
         <div class="mb-3">
             <label for="id_name" class="form-label">Room Name</label>
-            <input type="text" id="id_name" name="name" class="form-control" placeholder="Enter room name" required>
+            <input type="text" 
+                   id="id_name" 
+                   name="room_name" 
+                   class="form-control" 
+                   placeholder="Enter room name" 
+                   required
+                   {% comment %} PRE-FILL: Retains the name if the form was submitted but failed {% endcomment %}
+                   value="{{ request.POST.room_name|default_if_none:'' }}">
         </div>
 
-        <!-- Room Type -->
         <div class="mb-3">
             <label for="room_type" class="form-label">Select Room Type</label>
-            <select id="room_type" name="room_type" class="form-select" required>
+            <select id="room_type" name="roomType_name" class="form-select" required>
                 <option value="">-- Select Room Type --</option>
                 {% for room_type in room_types %}
-                <option value="{{ room_type.id }}">{{ room_type.name }}</option>
+                <option value="{{ room_type.id }}"
+                        {% comment %} PRE-FILL: Checks if the current room type ID matches the one submitted in POST {% endcomment %}
+                        {% if request.POST.roomType_name == room_type.id|stringformat:"s" %}selected{% endif %}>
+                    {{ room_type.roomType_name }}
+                </option>
                 {% endfor %}
             </select>
         </div>
 
-        <!-- Image Upload -->
         <div class="mb-3">
             <label for="id_image" class="form-label">Upload Image</label>
-            <input type="file" id="id_image" name="image" class="form-control">
+            <input type="file" id="id_image" name="room_image" class="form-control">
         </div>
 
         <button type="submit" class="btn btn-primary">Save Room</button>

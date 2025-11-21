@@ -28,15 +28,15 @@
         {% for package in packages %}
         <tr>
             <td>{{ forloop.counter }}</td>
-            <td>{{ package.name }}</td>
-            <td>{{ package.description|truncatechars:50 }}</td>
+            <td>{{ package.package_name }}</td>
+            <td>{{ package.package_description|truncatechars:50 }}</td>
             <td>
-                {% if package.activities.all %} {% for activity in package.activities.all %}
-                <span class="badge bg-secondary">{{ activity.name }}</span>{% if not forloop.last %}, {% endif %} {% empty %}
+                {% if package.package_activities.all %} {% for activity in package.package_activities.all %}
+                <span class="badge bg-secondary">{{ activity.activity_name }}</span>{% if not forloop.last %}, {% endif %} {% empty %}
                 <span class="text-muted">No activities</span> {% endfor %} {% else %}
                 <span class="text-muted">No activities</span> {% endif %}
             </td>
-            <td>Ksh {{ package.price_per_person }}</td>
+            <td>Ksh {{ package.package_price_per_person }}</td>
             <td>
                 <a href="{% url 'edit_package' package.id %}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i></a>
                 <a href="{% url 'delete_package' package.id %}" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this package?')">

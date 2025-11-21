@@ -1,6 +1,6 @@
 {% extends "base.admin.html" %} {% block title %}Delete Food{% endblock %} {% block content %}
 <h2>Confirm Deletion</h2>
-<p>Are you sure you want to delete <strong>{{ food.name }}</strong>?</p>
+<p>Are you sure you want to delete <strong>{{ food.food_name }}</strong>?</p>
 <form method="POST">
     {% csrf_token %}
     <button type="submit" class="btn btn-danger">Yes, Delete</button>

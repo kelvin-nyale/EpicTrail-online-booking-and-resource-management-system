@@ -28,9 +28,9 @@
         {% for activity in activities %}
         <tr>
             <td>{{ forloop.counter }}</td>
-            <td>{{ activity.name }}</td>
+            <td>{{ activity.activity_name }}</td>
             <!-- <td>{{ activity.description|truncatechars:50 }}</td> -->
-            <td>Ksh {{ activity.price_per_person }}</td>
+            <td>Ksh {{ activity.activity_price_per_person }}</td>
             <td>
                 <a href="{% url 'edit_activity' activity.id %}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i></a>
                 <a href="{% url 'delete_activity' activity.id %}" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this activity?')">

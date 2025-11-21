@@ -103,7 +103,7 @@ class TourAdmin(admin.ModelAdmin):
 # -----------------------------
 @admin.register(FoodOrder)
 class FoodOrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'foodOrder_user', 'foodOrder_food', 'foodOrder_quantity', 'foodOrder_status', 'foodOrder_created_at', 'total_price_display')
+    list_display = ('id', 'foodOrder_user', 'foodOrder_food', 'foodOrder_quantity', 'foodOrder_status', 'foodOrder_created_at', 'foodOrder_check_in', 'total_price_display')
     list_filter = ('foodOrder_status', 'foodOrder_created_at')
     search_fields = ('foodOrder_user__username', 'foodOrder_food__food_name')
 

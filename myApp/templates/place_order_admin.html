@@ -1,0 +1,45 @@
+{% extends "base.admin.html" %}
+{% block title %}Place Order | EpicTrail Adventures{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4 text-center">Place Food Order (Admin)</h2>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="user" class="form-label">Select User (or leave blank for Guest)</label>
+            <select class="form-select" id="user" name="user">
+                <option value="">Guest</option>
+                {% for u in users %}
+                <option value="{{ u.id }}">{{ u.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="food" class="form-label">Select Food</label>
+            <select class="form-select" id="food" name="food" required>
+                {% for f in foods %}
+                <option value="{{ f.id }}">{{ f.food_name }} - KSh {{ f.food_price_per_person|floatformat:2 }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="quantity" class="form-label">Quantity</label>
+            <input type="number" class="form-control" id="quantity" name="quantity" value="1" min="1" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="check_in" class="form-label">Check-In Date</label>
+            <input type="date" class="form-control" id="check_in" name="check_in" required>
+        </div>
+
+        <div class="d-flex justify-content-between">
+            <a href="{% url 'manage_orders' %}" class="btn btn-secondary">Back</a>
+            <button type="submit" class="btn btn-primary">Place Order</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

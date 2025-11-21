@@ -11,28 +11,28 @@
                 {% csrf_token %}
                 <div class="mb-3">
                     <label for="name" class="form-label">Room Type Name</label>
-                    <input type="text" class="form-control" id="name" name="name" value="{{ room_type.name }}" placeholder="Enter room type name" required>
+                    <input type="text" class="form-control" id="name" name="roomType_name" value="{{ room_type.roomType_name }}" placeholder="Enter room type name" required>
                 </div>
 
                 <div class="mb-3">
                     <label for="description" class="form-label">Description</label>
-                    <textarea class="form-control" id="description" name="description" rows="4" placeholder="Enter description">{{ room_type.description }}</textarea>
+                    <textarea class="form-control" id="description" name="roomType_description" rows="4" placeholder="Enter description">{{ room_type.roomType_description }}</textarea>
                 </div>
 
                 <div class="mb-3">
                     <label for="name" class="form-label">Room Capacity</label>
-                    <input type="text" class="form-control" id="capacity" name="capacity" value="{{ room_type.capacity }}" placeholder="Enter room type name" required>
+                    <input type="text" class="form-control" id="capacity" name="roomType_capacity" value="{{ room_type.roomType_capacity }}" placeholder="Enter room type name" required>
                 </div>
 
                 <div class="mb-3">
                     <label for="price" class="form-label">Price per Night</label>
                     <!-- <input type="number" name="price_per_night" value="{{ room_type.price_per_night }}" required> -->
-                    <input type="number" class="form-control" id="price_per_night" name="price_per_night" value="{{ room_type.price_per_night }}" placeholder="Enter price" required>
+                    <input type="number" class="form-control" id="price_per_night" name="roomType_price_per_night" value="{{ room_type.roomType_price_per_night }}" placeholder="Enter price" required>
                 </div>
 
                 <div class="mb-3">
                     <label for="total_rooms" class="form-label">Total Rooms</label>
-                    <input type="number" class="form-control" id="total_rooms" name="total_rooms" value="{{ room_type.total_rooms }}" placeholder="Enter Capacity" required>
+                    <input type="number" class="form-control" id="total_rooms" name="roomType_total_rooms" value="{{ room_type.roomType_total_rooms }}" placeholder="Enter Capacity" required>
                 </div>
 
                 <div class="text-end">

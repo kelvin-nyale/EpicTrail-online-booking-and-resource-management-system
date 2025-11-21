@@ -1,4 +1,8 @@
-{% extends 'base.admin.html' %} {% block title %}Rooms{% endblock %} {% block content %}
+{% extends 'base.admin.html' %}
+
+{% block title %}Rooms{% endblock %}
+
+{% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="mb-0">Accommodation Rooms</h2>
     <a href="{% url 'add_room' %}" class="btn btn-primary">
@@ -11,35 +15,49 @@
     {% for room in rooms %}
     <div class="col">
         <div class="card h-100 shadow-sm">
-            {% if room.image %}
-            <img src="{{ room.image.url }}" class="card-img-top" alt="{{ room.name }}" style="height:200px;object-fit:cover;"> {% else %}
-            <div class="bg-light d-flex align-items-center justify-content-center" style="height:200px;">
+
+            {% if room.room_image %}
+            <img src="{{ room.room_image.url }}" class="card-img-top" 
+                 alt="{{ room.room_name }}" 
+                 style="height:200px;object-fit:cover;">
+            {% else %}
+            <div class="bg-light d-flex align-items-center justify-content-center" 
+                 style="height:200px;">
                 <i class="fas fa-bed fa-3x text-muted"></i>
             </div>
             {% endif %}
 
             <div class="card-body d-flex flex-column">
-                <h5 class="card-title text-primary">{{ room.name }}</h5>
-                <p><strong>Type:</strong> {{ room.room_type.name|default:"No Type Assigned" }}</p>
-                <p><strong>Capacity:</strong> {{ room.room_type.capacity|default:"N/A" }}</p>
-                <p><strong>Price:</strong> Ksh {{ room.room_type.price_per_night|default:"N/A" }}</p>
+                <h5 class="card-title text-primary">{{ room.room_name }}</h5>
+
+                <p><strong>Type:</strong> 
+                    {{ room.room_room_type.roomType_name|default:"No Type Assigned" }}
+                </p>
+
+                <p><strong>Capacity:</strong> 
+                    {{ room.room_room_type.roomType_capacity|default:"N/A" }}
+                </p>
+
+                <p><strong>Price:</strong> 
+                    Ksh {{ room.room_room_type.roomType_price_per_night|default:"N/A" }}
+                </p>
 
                 <div class="mt-auto d-flex gap-2">
-                    <!-- {% if room.room_type.available_rooms|default:0 > 0 %}
-                    <a href="{% url 'book_room' room.id %}" class="btn btn-success btn-sm">
-                        <i class="fas fa-calendar-check me-1"></i> Book
-                    </a>
-                    {% endif %} -->
                     <a href="{% url 'edit_room' room.id %}" class="btn btn-warning btn-sm">
                         <i class="fas fa-edit mt-1 m-lg-1"></i>Edit
                     </a>
-                    <a href="{% url 'delete_room' room.id %}" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete {{ room.name }}?')">
+
+                    <a href="{% url 'delete_room' room.id %}" 
+                       class="btn btn-danger btn-sm"
+                       onclick="return confirm('Are you sure you want to delete {{ room.room_name }}?')">
                         <i class="fas fa-trash-alt mt-1 m-lg-1"></i>Delete
                     </a>
                 </div>
             </div>
+
         </div>
     </div>
+
     {% empty %}
     <div class="col-12">
         <div class="alert alert-info text-center">No rooms available.</div>
@@ -47,11 +65,11 @@
     {% endfor %}
 </div>
 
-
 <!-- Room Types Button -->
 <div class="mt-4">
     <a href="{% url 'room_types' %}" class="btn btn-secondary">
         <i class="fas fa-list me-1"></i> Room Types
     </a>
 </div>
+
 {% endblock %}

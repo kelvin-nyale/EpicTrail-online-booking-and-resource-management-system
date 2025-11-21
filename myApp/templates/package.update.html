@@ -7,19 +7,19 @@
     <!-- Package Name -->
     <div class="mb-3">
         <label for="id_name" class="form-label">Package Name</label>
-        <input type="text" id="id_name" name="name" class="form-control" value="{{ package.name }}" placeholder="Enter package name" required>
+        <input type="text" id="id_name" name="package_name" class="form-control" value="{{ package.package_name }}" placeholder="Enter package name" required>
     </div>
 
     <!-- Description -->
     <div class="mb-3">
         <label for="id_description" class="form-label">Description</label>
-        <textarea id="id_description" name="description" class="form-control" rows="4" placeholder="Enter package description">{{ package.description }}</textarea>
+        <textarea id="id_description" name="package_description" class="form-control" rows="4" placeholder="Enter package description">{{ package.package_description }}</textarea>
     </div>
 
     <!-- Price -->
     <div class="mb-3">
         <label for="id_price" class="form-label">Price per Person (Ksh)</label>
-        <input type="number" step="0.01" id="id_price" name="price_per_person" class="form-control" value="{{ package.price_per_person }}" placeholder="Enter price" required>
+        <input type="number" step="0.01" id="id_price" name="package_price_per_person" class="form-control" value="{{ package.package_price_per_person }}" placeholder="Enter price" required>
     </div>
 
     <!-- Activities -->
@@ -29,7 +29,7 @@
             {% for activity in activities %}
             <option value="{{ activity.id }}"
                 {% if activity.id in selected_activities %}selected{% endif %}>
-                {{ activity.name }}
+                {{ activity.activity_name }}
             </option>
             {% endfor %}
         </select>

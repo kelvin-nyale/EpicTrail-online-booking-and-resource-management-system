@@ -14,8 +14,8 @@
         {% for food in foods %}
         <tr>
             <td>{{ forloop.counter }}</td>
-            <td>{{ food.name }}</td>
-            <td>{{ food.price_per_person }}</td>
+            <td>{{ food.food_name }}</td>
+            <td>{{ food.food_price_per_person }}</td>
             <td>
                 <a href="{% url 'edit_food' food.id %}" class="btn btn-sm btn-primary">Edit</a>
                 <a href="{% url 'delete_food' food.id %}" class="btn btn-sm btn-danger">Delete</a>

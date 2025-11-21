@@ -1,54 +1,117 @@
-{% extends "base.admin.html" %} {% block title %} Orders/manage | EpicTrail Adventures {% endblock %} {% block content %}
-<div class="container mt-4">
-    <h2 class="mb-4 text-center">Food Orders</h2>
+{% extends "base.admin.html" %}
+{% block title %}Manage Orders | EpicTrail Adventures{% endblock %}
 
-    <table class="table table-bordered table-striped">
-        <thead class="table-dark">
-            <tr>
-                <th>#</th>
-                <th>User</th>
-                <th>Food</th>
-                <th>Quantity</th>
-                <th>Total Price</th>
-                <th>Status</th>
-                <th>Check_In</th>
-                <th>Date</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for order in orders %}
-            <tr>
-                <td>{{ forloop.counter }}</td>
-                <td>{{ order.user.username }}</td>
-                <td>{{ order.food.name }}</td>
-                <td>{{ order.quantity }}</td>
-                <td>{{ order.total_price }}</td>
-                <td>
-                    {% if order.status == "Pending" %}
-                    <span class="badge bg-warning">Pending</span> {% elif order.status == "Approved" %}
-                    <span class="badge bg-info">Approved</span> {% elif order.status == "Completed" %}
-                    <span class="badge bg-success">Completed</span> {% else %}
-                    <span class="badge bg-danger">Cancelled</span> {% endif %}
-                </td>
-                <td>{{ order.check_in|date:"M d, Y" }}</td>
-                <td>{{ order.created_at|date:"M d, Y H:i" }}</td>
-                <td>
-                    <form method="post" style="display:inline;">
-                        {% csrf_token %}
-                        <input type="hidden" name="order_id" value="{{ order.id }}">
-                        <button class="btn btn-sm btn-primary" name="action" value="approve">Approve</button>
-                        <button class="btn btn-sm btn-success" name="action" value="completed">Complete</button>
-                        <button class="btn btn-sm btn-danger" name="action" value="cancel">Cancel</button>
-                    </form>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="8" class="text-center">No orders found.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Food Orders</h2>
+        <a href="{% url 'place_order_admin' %}" class="btn btn-primary">Add New Order</a>
+    </div>
+
+    <!-- FULL-WIDTH SEARCH FORM -->
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-12 col-md-10">
+            <input type="text" name="q" class="form-control w-100" 
+                placeholder="Search by username, customer name, email, food, or status" 
+                value="{{ request.GET.q }}">
+        </div>
+        <div class="col-12 col-md-2 d-grid">
+            <button type="submit" class="btn btn-primary w-100">Search</button>
+        </div>
+    </form>
+
+    <!-- PRINT SELECTED ORDERS FORM -->
+    <form method="post" target="_blank" action="{% url 'print_orders' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-primary mb-3">Print Selected Order(s)</button>
+
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th><input type="checkbox" id="select-all"></th>
+                    <th>#</th>
+                    <th>User</th>
+                    <th>Food</th>
+                    <th>Quantity</th>
+                    <th>Total Price (KSh)</th>
+                    <th>Status</th>
+                    <th>Check-In</th>
+                    <th>Placed On</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td><input type="checkbox" name="order_ids" value="{{ order.id }}"></td>
+                    <td>{{ forloop.counter }}</td>
+                    <td>
+                        {% if order.foodOrder_user %}
+                            {{ order.foodOrder_user.username }}
+                        {% else %}
+                            Guest
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if order.foodOrder_food %}
+                            {{ order.foodOrder_food.food_name }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>{{ order.foodOrder_quantity|default:"-" }}</td>
+                    <td>{{ order.total_price|floatformat:2 }}</td>
+                    <td>
+                        {% if order.foodOrder_status == "Pending" %}
+                            <span class="badge bg-warning">Pending</span>
+                        {% elif order.foodOrder_status == "Approved" %}
+                            <span class="badge bg-info">Approved</span>
+                        {% elif order.foodOrder_status == "Completed" %}
+                            <span class="badge bg-success">Completed</span>
+                        {% else %}
+                            <span class="badge bg-danger">Cancelled</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if order.foodOrder_check_in %}
+                            {{ order.foodOrder_check_in|date:"M d, Y" }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if order.foodOrder_created_at %}
+                            {{ order.foodOrder_created_at|date:"M d, Y H:i" }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="d-flex gap-1 flex-fill">
+                            <a href="{% url 'update_order_admin' order.id %}" class="btn btn-sm btn-warning"><i class="bi bi-pencil-square"></i></a>
+                            <form method="post" action="{% url 'delete_order_admin' order.id %}" 
+                                  onsubmit="return confirm('Are you sure you want to delete this order?');">
+                                {% csrf_token %}
+                                <button class="btn btn-sm btn-danger"><i class="bi bi-trash-fill"></i></button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="text-center">No orders found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </form>
 </div>
+
+<script>
+    // Select/Deselect All Checkboxes
+    document.getElementById('select-all').addEventListener('click', function() {
+        const checkboxes = document.querySelectorAll('input[name="order_ids"]');
+        checkboxes.forEach(cb => cb.checked = this.checked);
+    });
+</script>
 {% endblock %}

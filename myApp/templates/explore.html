@@ -1,4 +1,6 @@
-{% extends base_template %} {% block title %}Explore{% endblock %} {% block content %}
+{% extends base_template %}
+{% block title %}Explore{% endblock %}
+{% block content %}
 <div class="container py-5">
 
     <!-- ACTIVITIES SECTION -->
@@ -7,16 +9,17 @@
         {% for activity in activities %}
         <div class="col">
             <div class="card h-100 shadow-sm">
-                {% if activity.image %}
-                <img src="{{ activity.image.url }}" class="card-img-top" alt="{{ activity.name }}" style="height:200px;object-fit:cover;"> {% else %}
+                {% if activity.activity_image %}
+                <img src="{{ activity.activity_image.url }}" class="card-img-top" alt="{{ activity.activity_name }}" style="height:200px;object-fit:cover;">
+                {% else %}
                 <div class="bg-light d-flex align-items-center justify-content-center" style="height:200px;">
                     <i class="fas fa-biking fa-3x text-muted"></i>
                 </div>
                 {% endif %}
                 <div class="card-body d-flex flex-column">
-                    <h5 class="card-title">{{ activity.name }}</h5>
-                    <p class="card-text">{{ activity.description|truncatewords:20 }}</p>
-                    <p class="text-muted">Price: Ksh {{ activity.price_per_person }}</p>
+                    <h5 class="card-title">{{ activity.activity_name }}</h5>
+                    <p class="card-text">{{ activity.activity_description|truncatewords:20 }}</p>
+                    <p class="text-muted">Price: Ksh {{ activity.activity_price_per_person }}</p>
                 </div>
             </div>
         </div>
@@ -31,17 +34,18 @@
         {% for room in rooms %}
         <div class="col">
             <div class="card h-100 shadow-sm">
-                {% if room.image %}
-                <img src="{{ room.image.url }}" class="card-img-top" alt="{{ room.name }}" style="height:200px;object-fit:cover;"> {% else %}
+                {% if room.room_image %}
+                <img src="{{ room.room_image.url }}" class="card-img-top" alt="{{ room.room_name }}" style="height:200px;object-fit:cover;">
+                {% else %}
                 <div class="bg-light d-flex align-items-center justify-content-center" style="height:200px;">
                     <i class="fas fa-bed fa-3x text-muted"></i>
                 </div>
                 {% endif %}
                 <div class="card-body d-flex flex-column">
-                    <h5 class="card-title">{{ room.name }}</h5>
-                    <p class="card-text"><strong>Type:</strong> {{ room.room_type.name }}</p>
-                    <p class="text-muted">Capacity {{ room.room_type.capacity }}</p>
-                    <p class="text-muted">Price: Ksh {{ room.room_type.price_per_night }}/night</p>
+                    <h5 class="card-title">{{ room.room_name }}</h5>
+                    <p class="card-text"><strong>Type:</strong> {{ room.room_room_type.roomType_name }}</p>
+                    <p class="text-muted">Capacity: {{ room.room_room_type.roomType_capacity }}</p>
+                    <p class="text-muted">Price: Ksh {{ room.room_room_type.roomType_price_per_night }}/night</p>
                     <a href="{% url 'book_room' room.id %}" class="btn btn-success mt-auto">Book Now</a>
                 </div>
             </div>
@@ -57,17 +61,18 @@
         {% for tour in tours %}
         <div class="col">
             <div class="card h-100 shadow-sm">
-                {% if tour.image %}
-                <img src="{{ tour.image.url }}" class="card-img-top" alt="{{ tour.name }}" style="height:200px;object-fit:cover;"> {% else %}
+                {% if tour.tour_image %}
+                <img src="{{ tour.tour_image.url }}" class="card-img-top" alt="{{ tour.tour_name }}" style="height:200px;object-fit:cover;">
+                {% else %}
                 <div class="bg-light d-flex align-items-center justify-content-center" style="height:200px;">
                     <i class="fas fa-map-marked-alt fa-3x text-muted"></i>
                 </div>
                 {% endif %}
                 <div class="card-body d-flex flex-column">
-                    <h5 class="card-title">{{ tour.name }}</h5>
-                    <p class="text-muted">Destination: {{ tour.destination }}</p>
-                    <p class="card-text">{{ tour.description|truncatewords:20 }}</p>
-                    <p class="text-muted">Price: Ksh {{ tour.price_per_person }}</p>
+                    <h5 class="card-title">{{ tour.tour_name }}</h5>
+                    <p class="text-muted">Destination: {{ tour.tour_destination }}</p>
+                    <p class="card-text">{{ tour.tour_description|truncatewords:20 }}</p>
+                    <p class="text-muted">Price: Ksh {{ tour.tour_price_per_person }}</p>
                     <a href="#" class="btn btn-success mt-auto">Book Now</a>
                 </div>
             </div>

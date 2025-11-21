@@ -14,9 +14,9 @@
     <div class="card shadow-sm p-4 mb-4">
         <h5 class="text-primary">Booking Summary</h5>
         <ul class="list-group list-group-flush">
-            <li class="list-group-item">Check-in: {{ booking.check_in }}</li>
-            <li class="list-group-item">Check-out: {{ booking.check_out }}</li>
-            <li class="list-group-item">Pax: {{ booking.pax }}</li>
+            <li class="list-group-item">Check-in: {{ booking.booking_check_in }}</li>
+            <li class="list-group-item">Check-out: {{ booking.booking_check_out }}</li>
+            <li class="list-group-item">Pax: {{ booking.booking_pax }}</li>
             <li class="list-group-item">Total Amount: Ksh {{ booking.amount_required|floatformat:2 }}</li>
         </ul>
     </div>

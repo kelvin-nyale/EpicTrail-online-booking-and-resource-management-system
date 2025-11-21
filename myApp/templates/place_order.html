@@ -1,4 +1,6 @@
-{% extends "base.user.html" %} {% block content %}
+{% extends "base.user.html" %}
+{% block title %}Place Food Order{% endblock %}
+{% block content %}
 <div class="container mt-4">
     <h2 class="mb-4 text-center">Place Food Order</h2>
 
@@ -11,7 +13,7 @@
                 <option value="">-- Select Food Item --</option>
                 {% for item in foods %}
                 <option value="{{ item.id }}">
-                    {{ item.name }} - {{ item.price_per_person }}
+                    {{ item.food_name }} - Ksh {{ item.food_price_per_person|floatformat:2 }}
                 </option>
                 {% endfor %}
             </select>
@@ -21,9 +23,10 @@
             <label for="quantity" class="form-label">Quantity</label>
             <input type="number" name="quantity" id="quantity" class="form-control" min="1" required>
         </div>
+
         <div class="mb-3">
             <label for="check_in" class="form-label">Check-in Date</label>
-            <input type="date" name="check_in" id="check_in" class="form-control" required>
+            <input type="date" name="foodOrder_check_in" id="check_in" class="form-control" required>
         </div>
 
         <button type="submit" class="btn btn-success w-100">Place Order</button>

@@ -8,30 +8,30 @@
 
         <div class="mb-3">
             <label class="form-label">Name</label>
-            <input type="text" name="name" value="{{ tour.name }}" class="form-control" required>
+            <input type="text" name="tour_name" value="{{ tour.tour_name }}" class="form-control" required>
         </div>
 
         <div class="mb-3">
             <label class="form-label">Destination</label>
-            <input type="text" name="destination" value="{{ tour.destination }}" class="form-control" required>
+            <input type="text" name="tour_destination" value="{{ tour.tour_destination }}" class="form-control" required>
         </div>
 
         <div class="mb-3">
             <label class="form-label">Description</label>
-            <textarea name="description" class="form-control" rows="4" required>{{ tour.description }}</textarea>
+            <textarea name="tour_description" class="form-control" rows="4" required>{{ tour.tour_description }}</textarea>
         </div>
 
         <div class="mb-3">
             <label class="form-label">Price (per person)</label>
-            <input type="number" name="price_per_person" value="{{ tour.price_per_person }}" class="form-control" step="0.01" required>
+            <input type="number" name="tour_price_per_person" value="{{ tour.tour_price_per_person }}" class="form-control" step="0.01" required>
         </div>
 
         <div class="mb-3">
             <label class="form-label">Change Image</label>
-            <input type="file" name="image" class="form-control"> {% if tour.image %}
+            <input type="file" name="tour_image" class="form-control"> {% if tour.tour_image %}
             <div class="mt-2">
                 <p>Current Image:</p>
-                <img src="{{ tour.image.url }}" alt="Tour Image" class="img-thumbnail" style="max-width: 200px;">
+                <img src="{{ tour.tour_image.url }}" alt="Tour Image" class="img-thumbnail" style="max-width: 200px;">
             </div>
             {% endif %}
         </div>

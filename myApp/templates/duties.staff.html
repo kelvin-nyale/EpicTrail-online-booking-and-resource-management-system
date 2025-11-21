@@ -1,4 +1,6 @@
-{% extends "base.staff.html" %} {% block title %}My Duties{% endblock %} {% block content %}
+{% extends "base.staff.html" %} 
+{% block title %}My Duties{% endblock %} 
+{% block content %}
 <div class="container mt-4">
     <h2 class="mb-4">My Assigned Duties</h2>
 
@@ -18,21 +20,23 @@
             {% for duty in duties %}
             <tr>
                 <td>{{ forloop.counter }}</td>
-                <td>{{ duty.title }}</td>
-                <td>{{ duty.description }}</td>
-                <td>{{ duty.due_date|date:"M d, Y" }}</td>
+                <td>{{ duty.duty_title }}</td>
+                <td>{{ duty.duty_description }}</td>
+                <td>{{ duty.duty_due_date|date:"M d, Y" }}</td>
                 <td>
-                    {% if duty.completed %}
-                    <span class="badge bg-success">Completed</span> {% else %}
-                    <span class="badge bg-warning text-dark">Pending</span> {% endif %}
+                    {% if duty.duty_completed %}
+                    <span class="badge bg-success">Completed</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark">Pending</span>
+                    {% endif %}
                 </td>
                 <td>
                     <form method="POST" style="display:inline;">
                         {% csrf_token %}
                         <input type="hidden" name="duty_id" value="{{ duty.id }}">
-                        <button type="submit" class="btn btn-sm {% if duty.completed %}btn-secondary{% else %}btn-primary{% endif %}">
-                {% if duty.completed %}Mark Pending{% else %}Mark Completed{% endif %}
-              </button>
+                        <button type="submit" class="btn btn-sm {% if duty.duty_completed %}btn-secondary{% else %}btn-primary{% endif %}">
+                            {% if duty.duty_completed %}Mark Pending{% else %}Mark Completed{% endif %}
+                        </button>
                     </form>
                 </td>
             </tr>

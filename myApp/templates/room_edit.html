@@ -1,29 +1,45 @@
-{% extends 'base.admin.html' %} {% block title %}Edit Room{% endblock %} {% block content %}
+{% extends 'base.admin.html' %}
+
+{% block title %}Edit Room{% endblock %}
+
+{% block content %}
 <div class="card shadow-sm p-4">
     <h2 class="mb-4">Edit Room</h2>
+
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
+
+        <!-- ROOM NAME -->
         <div class="mb-3">
             <label class="form-label">Room Name</label>
-            <input type="text" name="name" value="{{ room.name }}" class="form-control" required>
+            <input type="text"
+                   name="room_name"
+                   value="{{ room.room_name }}"
+                   class="form-control"
+                   required>
         </div>
 
+        <!-- ROOM TYPE -->
         <div class="mb-3">
             <label class="form-label">Room Type</label>
-            <select name="room_type" class="form-select" required>
+            <select name="room_room_type" class="form-select" required>
                 {% for rt in room_types %}
-                <option value="{{ rt.id }}" {% if room.room_type.id == rt.id %}selected{% endif %}>
-                    {{ rt.name }}
+                <option value="{{ rt.id }}"
+                        {% if room.room_room_type.id == rt.id %}selected{% endif %}>
+                    {{ rt.roomType_name }}
                 </option>
                 {% endfor %}
             </select>
         </div>
 
+        <!-- IMAGE -->
         <div class="mb-3">
             <label class="form-label">Room Image</label>
-            <input type="file" name="image" class="form-control"> {% if room.image %}
+            <input type="file" name="room_image" class="form-control">
+
+            {% if room.room_image %}
             <div class="mt-2">
-                <img src="{{ room.image.url }}" alt="Room Image" style="max-width:150px;">
+                <img src="{{ room.room_image.url }}" alt="Room Image" style="max-width:150px;">
             </div>
             {% endif %}
         </div>

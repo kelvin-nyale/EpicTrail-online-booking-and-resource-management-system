@@ -103,8 +103,8 @@
                         aria-expanded="false"
                         style="width: 40px; height: 40px;" 
                         title="Manage Profile">
-                    {% if user.profile.photo %}
-                        <img src="{{ user.profile.photo.url }}" alt="{{ user.username }}" class="rounded-circle" width="40" height="40">
+                    {% if user.profile.profile_photo %}
+                        <img src="{{ user.profile.profile_photo.url }}" alt="{{ user.username }}" class="rounded-circle" width="40" height="40">
                     {% else %}
                         <i class="bi bi-person bg-light rounded-circle"></i>
                     {% endif %}

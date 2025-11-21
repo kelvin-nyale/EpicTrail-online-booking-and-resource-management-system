@@ -1,4 +1,7 @@
-{% extends base_template %} {% block title %}Create Booking{% endblock %} {% block content %}
+{% extends base_template %}
+{% block title %}Create Booking{% endblock %}
+
+{% block content %}
 <div class="card shadow-sm p-4">
     <h2 class="mb-4 text-primary">Create New Booking</h2>
 
@@ -14,7 +17,9 @@
     {% endif %}
 
     <form method="post" class="needs-validation" novalidate>
-        {% csrf_token %} {% if not user.is_authenticated %}
+        {% csrf_token %}
+        
+        {% if not user.is_authenticated %}
         <div class="mb-3">
             <label class="form-label">Your Name</label>
             <input type="text" name="customer_name" class="form-control" required>
@@ -47,7 +52,7 @@
 
         <h5 class="text-secondary mt-4">Optional Add-ons</h5>
 
-        <!-- Activities -->
+        {% comment %} Activities {% endcomment %}
         <div class="form-check mb-2">
             <input class="form-check-input toggle-section" type="checkbox" data-target="#activities-section">
             <label class="form-check-label">Include Activities</label>
@@ -55,17 +60,17 @@
         <div id="activities-section" class="d-none border rounded p-3 mb-3">
             <label class="form-label">Activities</label>
             <select name="activities" class="form-select" multiple>
-        {% for activity in activities %}
-        <option value="{{ activity.id }}" data-price="{{ activity.price_per_person }}">
-          {{ activity.name }} - Ksh {{ activity.price_per_person }}
-        </option>
-        {% endfor %}
-      </select>
+                {% for activity in activities %}
+                <option value="{{ activity.id }}" data-price="{{ activity.activity_price_per_person }}">
+                    {{ activity.activity_name }} - Ksh {{ activity.activity_price_per_person }}
+                </option>
+                {% endfor %}
+            </select>
             <label class="form-label mt-2">Pax</label>
             <input type="number" name="activities_pax" class="form-control" min="1" value="1">
         </div>
 
-        <!-- Packages -->
+        {% comment %} Packages {% endcomment %}
         <div class="form-check mb-2">
             <input class="form-check-input toggle-section" type="checkbox" data-target="#packages-section">
             <label class="form-check-label">Include Packages</label>
@@ -73,17 +78,17 @@
         <div id="packages-section" class="d-none border rounded p-3 mb-3">
             <label class="form-label">Packages</label>
             <select name="packages" class="form-select" multiple>
-        {% for package in packages %}
-        <option value="{{ package.id }}" data-price="{{ package.price }}">
-          {{ package.name }} - Ksh {{ package.price }}
-        </option>
-        {% endfor %}
-      </select>
+                {% for package in packages %}
+                <option value="{{ package.id }}" data-price="{{ package.package_price_per_person }}">
+                    {{ package.package_name }} - Ksh {{ package.package_price_per_person }}
+                </option>
+                {% endfor %}
+            </select>
             <label class="form-label mt-2">Pax</label>
             <input type="number" name="packages_pax" class="form-control" min="1" value="1">
         </div>
 
-        <!-- Rooms -->
+        {% comment %} Rooms {% endcomment %}
         <div class="form-check mb-2">
             <input class="form-check-input toggle-section" type="checkbox" data-target="#rooms-section">
             <label class="form-check-label">Include Rooms</label>
@@ -91,17 +96,17 @@
         <div id="rooms-section" class="d-none border rounded p-3 mb-3">
             <label class="form-label">Rooms</label>
             <select name="rooms" class="form-select" multiple>
-        {% for room in rooms %}
-        <option value="{{ room.id }}" data-price="{{ room.room_type.price_per_night }}">
-          {{ room.name }} - {{ room.room_type.name }} - Ksh {{ room.room_type.price_per_night }}
-        </option>
-        {% endfor %}
-      </select>
+                {% for room in rooms %}
+                <option value="{{ room.id }}" data-price="{{ room.room_room_type.roomType_price_per_night }}">
+                    {{ room.room_name }} - {{ room.room_room_type.roomType_name }} - Ksh {{ room.room_room_type.roomType_price_per_night }}
+                </option>
+                {% endfor %}
+            </select>
             <label class="form-label mt-2">Pax</label>
             <input type="number" name="rooms_pax" class="form-control" min="1" value="1">
         </div>
 
-        <!-- Food -->
+        {% comment %} Food {% endcomment %}
         <div class="form-check mb-2">
             <input class="form-check-input toggle-section" type="checkbox" data-target="#food-section">
             <label class="form-check-label">Include Food</label>
@@ -109,17 +114,17 @@
         <div id="food-section" class="d-none border rounded p-3 mb-3">
             <label class="form-label">Food</label>
             <select name="food" class="form-select" multiple>
-        {% for f in food %}
-        <option value="{{ f.id }}" data-price="{{ f.price }}">
-          {{ f.name }} - Ksh {{ f.price_per_person }}
-        </option>
-        {% endfor %}
-      </select>
+                {% for f in food %}
+                <option value="{{ f.id }}" data-price="{{ f.food_price_per_person }}">
+                    {{ f.food_name }} - Ksh {{ f.food_price_per_person }}
+                </option>
+                {% endfor %}
+            </select>
             <label class="form-label mt-2">Pax</label>
             <input type="number" name="food_pax" class="form-control" min="1" value="1">
         </div>
 
-        <!-- Tours -->
+        {% comment %} Tours {% endcomment %}
         <div class="form-check mb-2">
             <input class="form-check-input toggle-section" type="checkbox" data-target="#tours-section">
             <label class="form-check-label">Include Tours</label>
@@ -127,15 +132,18 @@
         <div id="tours-section" class="d-none border rounded p-3 mb-3">
             <label class="form-label">Tours</label>
             <select name="tours" class="form-select" multiple>
-        {% for tour in tours %}
-        <option value="{{ tour.id }}" data-price="{{ tour.price_per_person }}">
-          {{ tour.name }} - Ksh {{ tour.price_per_person }}
-        </option>
-        {% endfor %}
-      </select>
+                {% for tour in tours %}
+                <option value="{{ tour.id }}" data-price="{{ tour.tour_price_per_person }}">
+                    {{ tour.tour_name }} - Ksh {{ tour.tour_price_per_person }}
+                </option>
+                {% endfor %}
+            </select>
             <label class="form-label mt-2">Pax</label>
             <input type="number" name="tours_pax" class="form-control" min="1" value="1">
         </div>
+
+        <!-- Hidden field for total pax -->
+        <input type="hidden" name="total_pax" id="total-pax" value="1">
 
         <!-- Total -->
         <div class="mt-4 border-top pt-3">
@@ -144,87 +152,73 @@
         </div>
 
         <button type="submit" class="btn btn-success w-100 mt-3">Create Booking</button>
-        <a href="{% url 'booking_list' %}" class="btn btn-danger w-100 mt-3">Cancel Booking</a>
+        <a href="{% url 'booking_list' %}" class="btn btn-danger w-100 mt-2">Cancel Booking</a>
     </form>
 </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", () => {
-        const totalAmountDisplay = document.getElementById('total-amount');
+document.addEventListener("DOMContentLoaded", () => {
+    const totalAmountDisplay = document.getElementById('total-amount');
+    const totalPaxInput = document.getElementById('total-pax');
 
-        const getSelectedOptions = (selector) => {
-            const select = document.querySelector(selector);
-            return select ? Array.from(select.selectedOptions) : [];
-        };
+    const getSelectedOptions = (selector) => {
+        const select = document.querySelector(selector);
+        return select ? Array.from(select.selectedOptions) : [];
+    };
 
-        function updateTotal() {
-            let total = 0;
+    function updateTotal() {
+        let total = 0;
+        let totalPax = 0;
 
-            if (!document.getElementById('activities-section').classList.contains('d-none')) {
-                const pax = parseInt(document.querySelector('[name="activities_pax"]').value) || 1;
-                getSelectedOptions('[name="activities"]').forEach(opt => {
+        const sections = [
+            {id: "activities-section", paxInput: "activities_pax", selector: "[name='activities']"},
+            {id: "packages-section", paxInput: "packages_pax", selector: "[name='packages']"},
+            {id: "rooms-section", paxInput: "rooms_pax", selector: "[name='rooms']"},
+            {id: "food-section", paxInput: "food_pax", selector: "[name='food']"},
+            {id: "tours-section", paxInput: "tours_pax", selector: "[name='tours']"},
+        ];
+
+        sections.forEach(sec => {
+            if (!document.getElementById(sec.id).classList.contains('d-none')) {
+                const pax = parseInt(document.querySelector(`[name='${sec.paxInput}']`).value) || 1;
+                totalPax += pax;
+                getSelectedOptions(sec.selector).forEach(opt => {
                     total += parseFloat(opt.dataset.price) * pax;
                 });
             }
-
-            if (!document.getElementById('packages-section').classList.contains('d-none')) {
-                const pax = parseInt(document.querySelector('[name="packages_pax"]').value) || 1;
-                getSelectedOptions('[name="packages"]').forEach(opt => {
-                    total += parseFloat(opt.dataset.price) * pax;
-                });
-            }
-
-            if (!document.getElementById('rooms-section').classList.contains('d-none')) {
-                const pax = parseInt(document.querySelector('[name="rooms_pax"]').value) || 1;
-                getSelectedOptions('[name="rooms"]').forEach(opt => {
-                    total += parseFloat(opt.dataset.price) * pax;
-                });
-            }
-
-            if (!document.getElementById('food-section').classList.contains('d-none')) {
-                const pax = parseInt(document.querySelector('[name="food_pax"]').value) || 1;
-                getSelectedOptions('[name="food"]').forEach(opt => {
-                    total += parseFloat(opt.dataset.price) * pax;
-                });
-            }
-
-            if (!document.getElementById('tours-section').classList.contains('d-none')) {
-                const pax = parseInt(document.querySelector('[name="tours_pax"]').value) || 1;
-                getSelectedOptions('[name="tours"]').forEach(opt => {
-                    total += parseFloat(opt.dataset.price) * pax;
-                });
-            }
-
-            totalAmountDisplay.textContent = `Ksh ${total.toLocaleString()}`;
-        }
-
-        document.querySelectorAll('.toggle-section').forEach(cb => {
-            cb.addEventListener('change', () => {
-                const target = document.querySelector(cb.dataset.target);
-                cb.checked ? target.classList.remove('d-none') : target.classList.add('d-none');
-                updateTotal();
-            });
         });
 
-        document.querySelectorAll('select, input').forEach(el => {
-            el.addEventListener('input', updateTotal);
+        totalAmountDisplay.textContent = `Ksh ${total.toLocaleString()}`;
+        totalPaxInput.value = totalPax;
+    }
+
+    document.querySelectorAll('.toggle-section').forEach(cb => {
+        cb.addEventListener('change', () => {
+            const target = document.querySelector(cb.dataset.target);
+            cb.checked ? target.classList.remove('d-none') : target.classList.add('d-none');
+            updateTotal();
         });
-
-        updateTotal();
-
-        // Bootstrap validation
-        (() => {
-            const forms = document.querySelectorAll('.needs-validation');
-            Array.from(forms).forEach(form => {
-                form.addEventListener('submit', event => {
-                    if (!form.checkValidity()) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                    }
-                    form.classList.add('was-validated');
-                }, false);
-            });
-        })();
     });
+
+    document.querySelectorAll('select, input').forEach(el => {
+        el.addEventListener('input', updateTotal);
+    });
+
+    updateTotal();
+
+    // Bootstrap validation
+    (() => {
+        const forms = document.querySelectorAll('.needs-validation');
+        Array.from(forms).forEach(form => {
+            form.addEventListener('submit', event => {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    })();
+});
 </script>
 {% endblock %}

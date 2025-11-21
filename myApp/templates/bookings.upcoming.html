@@ -1,65 +1,77 @@
-{% extends base_template %} {% block title %}Upcoming Bookings - EpicTrail Adventures{% endblock %} {% block content %}
+{% extends base_template %}
+{% block title %}Upcoming Bookings - EpicTrail Adventures{% endblock %}
+
+{% block content %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-    <!-- <h2 class="text-primary">All Bookings</h2> -->
-    <h2 class="mb-3">Upcoming Bookings</h2>
-    <div class="btn-group" role="group" aria-label="Actions">
-        <a href="{% url 'create_booking' %}" class="btn btn-success">
-            <i class="fas fa-plus-circle"></i> New Booking
-        </a>
-        <a href="{% url 'create_user_booking' %}" class="btn btn-primary ms-2">
-            <i class="fas fa-plus-circle"></i> Create New User Booking
-        </a>
-        <a href="{% url 'booking_list' %}" class="btn btn-primary ms-2">
-            All Bookings
-        </a>
+        <h2 class="mb-3">Upcoming Bookings</h2>
+        <div class="btn-group" role="group" aria-label="Actions">
+            <a href="{% url 'create_booking' %}" class="btn btn-success">
+                <i class="fas fa-plus-circle"></i> New Booking
+            </a>
+            <a href="{% url 'create_user_booking' %}" class="btn btn-primary ms-2">
+                <i class="fas fa-plus-circle"></i> Create New User Booking
+            </a>
+            <a href="{% url 'booking_list' %}" class="btn btn-primary ms-2">
+                All Bookings
+            </a>
+        </div>
     </div>
-</div>
     
+    {% if upcoming_bookings %}
     <div class="table-responsive">
-        {% if upcoming_bookings %}
         <table class="table table-striped">
-        <thead class="table-secondary">
-            <tr>
-                <th>Customer</th>
-                <th>Check-In</th>
-                <th>Check-Out</th>
-                <th>Services & No. of Guests</th>
-                <th>Paid</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for booking in upcoming_bookings %}
-            <tr>
-                <td>
-                    {% if booking.user %} {{ booking.user.username }} {% else %} {{ booking.customer_email|default:"N/A" }} {% endif %}
-                </td>
-                <!-- <td>{{ booking.user.username }}</td> -->
-                <td>{{ booking.check_in|date:"Y-m-d" }}</td>
-                <td>{{ booking.check_out|date:"Y-m-d" }}</td>
-                <!-- <td>{{ booking.pax_details }}</td> -->
-                <td>
-                    {% if booking.display_pax_details %}
+            <thead class="table-secondary">
+                <tr>
+                    <th>Customer</th>
+                    <th>Email</th>
+                    <th>Check-In</th>
+                    <th>Check-Out</th>
+                    <th>Services & No. of Guests</th>
+                    <th>Paid</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in upcoming_bookings %}
+                <tr>
+                    <td>
+                        {% if booking.booking_user %}
+                            {{ booking.booking_user.username }}
+                        {% else %}
+                            {{ booking.booking_customer_name|default:"Guest" }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if booking.booking_user %}
+                            {{ booking.booking_user.email }}
+                        {% else %}
+                            {{ booking.booking_customer_email|default:"N/A" }}
+                        {% endif %}
+                    </td>
+                    <td>{{ booking.booking_check_in|date:"M d, Y"|default:"N/A" }}</td>
+                    <td>{{ booking.booking_check_out|date:"M d, Y"|default:"N/A" }}</td>
+                    <td>
+                        {% if booking.display_pax_details %}
                         <ul>
-                        {% for detail in booking.display_pax_details %}
-                            <li>{{ detail }}</li>
-                        {% endfor %}
+                            {% for detail in booking.display_pax_details %}
+                                <li>{{ detail }}</li>
+                            {% endfor %}
                         </ul>
-                    {% else %}
+                        {% else %}
                         <em>No pax details</em>
-                    {% endif %}
-                </td>
-
-                <td>{% if booking.paid %}✔{% else %}✘{% endif %}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
+                        {% endif %}
+                    </td>
+                    <td>{% if booking.paid %}✔{% else %}✘{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
+    {% else %}
     <p>No upcoming bookings.</p>
     {% endif %}
-    <a href="{% url 'booking_list' %}" class="btn btn-primary ms-2">
+
+    <a href="{% url 'booking_list' %}" class="btn btn-primary ms-2 mt-3">
         Back to Bookings
     </a>
 </div>

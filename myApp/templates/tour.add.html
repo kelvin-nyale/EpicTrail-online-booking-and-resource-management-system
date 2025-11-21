@@ -5,27 +5,27 @@
     {% csrf_token %}
     <div class="mb-3">
         <label for="id_name" class="form-label">Tour Name</label>
-        <input type="text" id="id_name" name="name" class="form-control" required>
+        <input type="text" id="id_name" name="tour_name" class="form-control" required>
     </div>
 
     <div class="mb-3">
         <label for="id_destination" class="form-label">Destination</label>
-        <input type="text" id="id_destination" name="destination" class="form-control" required>
+        <input type="text" id="id_destination" name="tour_destination" class="form-control" required>
     </div>
 
     <div class="mb-3">
         <label for="id_description" class="form-label">Description</label>
-        <textarea id="id_description" name="description" class="form-control" rows="4" required></textarea>
+        <textarea id="id_description" name="tour_description" class="form-control" rows="4" required></textarea>
     </div>
 
     <div class="mb-3">
         <label for="id_price_per_person" class="form-label">Price (per person)</label>
-        <input type="number" id="id_price_per_person" name="price_per_person" class="form-control" required>
+        <input type="number" id="id_price_per_person" name="tour_price_per_person" class="form-control" required>
     </div>
     <!-- Image Upload -->
     <div class="mb-3">
         <label for="id_image" class="form-label">Upload Image</label>
-        <input type="file" id="id_image" name="image" class="form-control">
+        <input type="file" id="id_image" name="tour_image" class="form-control">
     </div>
 
     <button type="submit" class="btn btn-success w-100">Save</button>

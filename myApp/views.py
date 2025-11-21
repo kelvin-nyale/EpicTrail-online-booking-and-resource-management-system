@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.db import IntegrityError
 from .models import Profile
 from .models import Activity, Package, Tour, Food, Room, RoomType, RoomBooking, Booking, Notification, Duty, FoodOrder
 from django.utils.dateparse import parse_date
@@ -160,11 +161,11 @@ def admin_dashboard(request):
 def staff_dashboard(request):
     # Count only pending duties/resources assigned to this staff member
     assigned_count = Duty.objects.filter(
-        staff=request.user, completed=False
+        duty_staff=request.user, duty_completed=False
     ).count()
     
     # Count bookings where date is in the future or today
-    upcoming_bookings_count = Booking.objects.filter(check_in__gte=timezone.now()).count()
+    upcoming_bookings_count = Booking.objects.filter(booking_check_in__gte=timezone.now()).count()
 
     return render(request, "dashboard.staff.html", {
         "assigned_count": assigned_count,
@@ -173,16 +174,41 @@ def staff_dashboard(request):
 
 @login_required
 def user_dashboard(request):
-    return render(request, 'dashboard.user.html')
+    user = request.user
+    today = timezone.now().date()
 
-# from django.conf import settings
+    # ------------------------------------------
+    # COUNT ONLY BOOKINGS BELONGING TO THIS USER
+    # ------------------------------------------
+    total_bookings = Booking.objects.filter(booking_user=user).count()
 
-# MPESA_CONSUMER_KEY = settings.MPESA_CONSUMER_KEY
-# MPESA_CONSUMER_SECRET = settings.MPESA_CONSUMER_SECRET
-# MPESA_SHORTCODE = settings.MPESA_SHORTCODE
-# MPESA_PASSKEY = settings.MPESA_PASSKEY
-# MPESA_ENVIRONMENT = settings.MPESA_ENVIRONMENT
-# CALLBACK_URL = settings.CALLBACK_URL
+    # ------------------------------------------
+    # RECENT BOOKINGS = bookings not yet ended
+    # booking_check_out >= today
+    # ------------------------------------------
+    recent_bookings = Booking.objects.filter(
+        booking_user=user,
+        booking_check_out__gte=today
+    ).order_by('-booking_check_in')[:5]
+
+    # Example placeholders — adjust to your models
+    total_services = (
+        Activity.objects.count() +
+        # Package.objects.count() +
+        Tour.objects.count() +
+        Room.objects.count() +
+        Food.objects.count()
+    )
+
+    # If you have notifications:
+    total_notifications = Notification.objects.filter(user=user, is_read=False).count()
+
+    return render(request, 'dashboard.user.html', {
+        'total_bookings': total_bookings,
+        'recent_bookings': recent_bookings,
+        'total_services': total_services,
+        'total_notifications': total_notifications,
+    })
 
 
 @login_required
@@ -302,19 +328,19 @@ def delete_user(request, user_id):
 @user_passes_test(is_admin)
 def add_activity(request):
     if request.method == 'POST':
-        name = request.POST.get('name')
-        description = request.POST.get('description')
-        price_per_person = request.POST.get('price_per_person')
+        activity_name = request.POST.get('activity_name')
+        activity_description = request.POST.get('activity_description')
+        activity_price_per_person = request.POST.get('activity_price_per_person')
 
         # Handle image upload if provided
-        image = request.FILES.get('image')
+        activity_image = request.FILES.get('activity_image')
 
-        if name and description and price_per_person and image:
+        if activity_name and activity_description and activity_price_per_person and activity_image:
             activity = Activity(
-                name=name,
-                description=description,
-                price_per_person=price_per_person,  
-                image=image  
+                activity_name=activity_name,
+                activity_description=activity_description,
+                activity_price_per_person=activity_price_per_person,  
+                activity_image=activity_image  
             )
             activity.save()  # Save to DB
             messages.success(request, 'Activity added successfully!')
@@ -334,7 +360,7 @@ def activity_list(request):
     query = request.GET.get('q', '').strip()
 
     # Fetch activities and apply search
-    activity_list = Activity.objects.all().order_by('-created_at')
+    activity_list = Activity.objects.all().order_by('-activity_created_at')
     if query:
         activity_list = activity_list.filter(
             Q(name__icontains=query) |
@@ -361,13 +387,13 @@ def edit_activity(request, pk):
     activity = get_object_or_404(Activity, pk=pk)
 
     if request.method == 'POST':
-        activity.name = request.POST.get('name')
-        activity.description = request.POST.get('description')
-        activity.price_per_person = request.POST.get('price_per_person')
+        activity.activity_name = request.POST.get('activity_name')
+        activity.activity_description = request.POST.get('activity_description')
+        activity.activity_price_per_person = request.POST.get('activity_price_per_person')
 
         # Handle new image upload if provided
-        if request.FILES.get('image'):
-            activity.image = request.FILES['image']
+        if request.FILES.get('activity_image'):
+            activity.activity_image = request.FILES['activity_image']
 
         activity.save()
         messages.success(request, 'Activity updated successfully!')
@@ -394,20 +420,20 @@ def delete_activity(request, pk):
 @user_passes_test(admin_required)
 def add_package(request):
     if request.method == "POST":
-        name = request.POST.get("name")
-        description = request.POST.get("description")
-        price_per_person = request.POST.get("price_per_person")
+        package_name = request.POST.get("package_name")
+        package_description = request.POST.get("package_description")
+        package_price_per_person = request.POST.get("package_price_per_person")
 
         # Safely fetch valid activities
         selected_ids = request.POST.getlist("activities")
         selected_activities = get_list_or_404(Activity, id__in=selected_ids)
 
         package = Package.objects.create(
-            name=name,
-            description=description,
-            price_per_person=price_per_person
+            package_name=package_name,
+            package_description=package_description,
+            package_price_per_person=package_price_per_person
         )
-        package.activities.set(selected_activities)  # Link only valid activities
+        package.package_activities.set(selected_activities)  # Link only valid activities
         package.save()
 
         return redirect("list_packages")
@@ -422,7 +448,7 @@ def list_packages(request):
     query = request.GET.get('q', '').strip()
 
     # Fetch activities and apply search
-    list_packages = Package.objects.all().order_by('-created_at')
+    list_packages = Package.objects.all().order_by('-package_created_at')
     if query:
         list_packages = list_packages.filter(
             Q(name__icontains=query) |
@@ -449,21 +475,21 @@ def edit_package(request, pk):
 
     if request.method == "POST":
         # Basic fields
-        package.name = request.POST.get("name")
-        package.description = request.POST.get("description")
+        package.package_name = request.POST.get("package_name")
+        package.package_description = request.POST.get("package_description")
 
         # Convert price safely
-        price_input = request.POST.get("price_per_person")
+        price_input = request.POST.get("package_price_per_person")
         try:
-            package.price_per_person = Decimal(price_input)
+            package.package_price_per_person = Decimal(price_input)
         except (InvalidOperation, TypeError):
             messages.error(request, "Enter a valid price.")
             return redirect("edit_package", pk=pk)
 
         # Update activities
         selected_ids = request.POST.getlist("activities")
-        activities = Activity.objects.filter(id__in=selected_ids)
-        package.activities.set(activities)
+        package_activities = Activity.objects.filter(id__in=selected_ids)
+        package.package_activities.set(package_activities)
 
         package.save()
         messages.success(request, "Package updated successfully.")
@@ -471,7 +497,7 @@ def edit_package(request, pk):
 
     # Data for the form
     activities = Activity.objects.all()
-    selected_activities = package.activities.values_list("id", flat=True)
+    selected_activities = package.package_activities.values_list("id", flat=True)
 
     return render(
         request,
@@ -495,28 +521,58 @@ def delete_package(request, pk):
 @user_passes_test(admin_required)
 def add_room_type(request):
     if request.method == 'POST':
-        name = request.POST.get('name')
-        description = request.POST.get('description')
-        capacity = request.POST.get('capacity')
-        price_per_night = request.POST.get('price_per_night')
-        total_rooms = request.POST.get('total_rooms')
+        # 1. Get raw string data from POST request
+        roomType_name = request.POST.get('roomType_name')
+        roomType_description = request.POST.get('roomType_description')
         
-        RoomType.objects.create(
-            name=name,
-            description=description,
-            capacity=capacity,
-            price_per_night=price_per_night,
-            total_rooms=total_rooms
-        )
+        # NOTE: .get() returns None if the key is missing or an empty string if present but empty.
+        # We need to explicitly check and handle invalid inputs.
+
+        # 2. Input Validation (Checking for the missing NOT NULL field)
+        if not roomType_name or roomType_name.strip() == "":
+            messages.error(request, 'Error: Room Type Name is required.')
+            return render(request, 'room.type.add.html', request.POST) # Re-render with existing data
         
-        messages.success(request, 'Room Type added successfully!')
-        return redirect('room_types')
+        # 3. Type Conversion and Cleaning (Important for numeric fields)
+        try:
+            # Safely convert to integer, defaulting to 0 or None if conversion fails
+            roomType_capacity = int(request.POST.get('roomType_capacity', 0) or 0)
+            roomType_total_rooms = int(request.POST.get('roomType_total_rooms', 0) or 0)
+            
+            # Use float or Decimal for price, depending on your model field type
+            roomType_price_per_night = float(request.POST.get('roomType_price_per_night', 0.0) or 0.0)
+            
+        except (ValueError, TypeError):
+            # Handle non-numeric input for numeric fields
+            messages.error(request, 'Error: Capacity, Price, and Total Rooms must be valid numbers.')
+            return render(request, 'room.type.add.html', request.POST)
+
+
+        # 4. Database Creation
+        try:
+            RoomType.objects.create(
+                roomType_name=roomType_name.strip(), # Use .strip() to remove leading/trailing whitespace
+                roomType_description=roomType_description,
+                roomType_capacity=roomType_capacity,
+                roomType_price_per_night=roomType_price_per_night,
+                roomType_total_rooms=roomType_total_rooms
+            )
+            
+            messages.success(request, f'Room Type "{roomType_name.strip()}" added successfully!')
+            return redirect('room_types')
+
+        except Exception as e:
+            # Handle other potential database errors (e.g., unique constraint violation)
+            messages.error(request, f'An unexpected error occurred during database save: {e}')
+            return render(request, 'room.type.add.html', request.POST)
+
+    # If request method is GET, just render the form
     return render(request, 'room.type.add.html')
 
 @login_required
 @user_passes_test(lambda u: u.is_staff or u.is_superuser)
 def room_types(request):
-    room_types = RoomType.objects.all().order_by('price_per_night')
+    room_types = RoomType.objects.all().order_by('roomType_price_per_night')
     return render(request, 'room_type.html', {'room_types': room_types})
 
 @login_required
@@ -525,59 +581,117 @@ def edit_room_type(request, pk):
     room_type = get_object_or_404(RoomType, pk=pk)
 
     if request.method == 'POST':
-        room_type.name = request.POST.get('name')
-        room_type.description = request.POST.get('description')
-        room_type.capacity = request.POST.get('capacity')
-        price = request.POST.get('price_per_night')
-        total_rooms = request.POST.get('total_rooms')
+        room_type.roomType_name = request.POST.get('roomType_name')
+        room_type.roomType_description = request.POST.get('roomType_description')
+        room_type.roomType_capacity = request.POST.get('roomType_capacity')
+        roomType_price = request.POST.get('roomType_price_per_night')
+        roomType_total_rooms = request.POST.get('roomType_total_rooms')
 
-        if not price:
+        if not roomType_price:
             messages.error(request, "Price per night is required.")
             return render(request, 'room.type.edit.html', {'room_type': room_type})
 
         try:
-            room_type.price_per_night = float(price)
+            room_type.roomType_price_per_night = float(roomType_price)
         except ValueError:
             messages.error(request, "Please enter a valid price.")
             return render(request, 'room.type.edit.html', {'room_type': room_type})
 
-        room_type.total_rooms = total_rooms
+        room_type.roomType_total_rooms = roomType_total_rooms
         room_type.save()
         messages.success(request, "Room type updated successfully!")
         return redirect('room_types')
 
     return render(request, 'room.type.edit.html', {'room_type': room_type})
 
+# @login_required
+# @user_passes_test(admin_required)
+# def delete_room_type(request, pk):
+#     if request.method == 'POST':
+#         room_type = get_object_or_404(RoomType, pk=pk)
+#         room_type.delete()
+#         messages.success(request, "Room type deleted successfully!")
+#     return redirect('room_types', {'room_type': room_type})
+
 @login_required
 @user_passes_test(admin_required)
 def delete_room_type(request, pk):
+    
     if request.method == 'POST':
+        # Safely retrieve the object. If it doesn't exist, a 404 is raised.
         room_type = get_object_or_404(RoomType, pk=pk)
+        
+        # Delete the object
         room_type.delete()
-        messages.success(request, "Room type deleted successfully!")
-    return redirect('room_types', {'room_type': room_type})
+        
+        messages.success(request, f"Room type '{room_type.roomType_name}' deleted successfully!")
+        
+        # 2. Redirect the user to the list page after success
+        return redirect('room_types') # Removed the redundant dictionary
+        
+    
+    # The view should return a redirect to the list page (room_types) 
+    # for any non-POST request to prevent unauthorized deletion attempts and fix the error.
+    return redirect('room_types')
+
 
 @login_required
 @user_passes_test(is_admin) 
 def add_room(request):
     if request.method == 'POST':
-        name = request.POST.get('name')
-        room_type_id = request.POST.get('room_type')
-        room_type = get_object_or_404(RoomType, id=room_type_id)
+        room_name = request.POST.get('room_name', '').strip()
+        room_type_id = request.POST.get('roomType_name')
+        room_image = request.FILES.get('room_image')
 
-        # Handle image upload if provided
-        image = request.FILES.get('image')
+        # --- 1. Server-Side Validation ---
+        
+        # Check if room name is provided
+        if not room_name:
+            messages.error(request, 'Error: Room Name is required.')
+            # Re-fetch room types and re-render the form
+            room_types = RoomType.objects.all()
+            return render(request, 'room_add.html', {'room_types': room_types})
 
-        Room.objects.create(
-            name=name,
-            room_type=room_type,
-            image=image  # Save the image
-        )
+        # Check if room type is selected and valid
+        try:
+            room_type = get_object_or_404(RoomType, id=room_type_id)
+        except ObjectDoesNotExist:
+            messages.error(request, 'Error: Invalid Room Type selected.')
+            room_types = RoomType.objects.all()
+            return render(request, 'room_add.html', {'room_types': room_types})
 
-        messages.success(request, "Room added successfully!")
-        return redirect('list_rooms')
+        # --- 2. Database Creation with Error Handling ---
+        try:
+            Room.objects.create(
+                room_name=room_name,
+                room_room_type=room_type,
+                room_image=room_image 
+            )
 
-    # Pass available room types to the template
+            messages.success(request, f"Room '{room_name}' added successfully!")
+            return redirect('list_rooms')
+
+        except IntegrityError as e:
+            # Handle unique constraint violation (e.g., room name already exists)
+            # You might need to check the specific error message for clarity
+            if 'unique' in str(e).lower():
+                 messages.error(request, f"Error: A room named '{room_name}' already exists.")
+            else:
+                 # Handle other integrity errors (like NOT NULL if room_name was missing before the check)
+                 messages.error(request, f"Database Error: Could not save room. {e}")
+
+            # Re-fetch room types and re-render the form
+            room_types = RoomType.objects.all()
+            return render(request, 'room_add.html', {'room_types': room_types})
+        
+        # Handle other unexpected errors
+        except Exception as e:
+            messages.error(request, f"An unexpected error occurred: {e}")
+            room_types = RoomType.objects.all()
+            return render(request, 'room_add.html', {'room_types': room_types})
+
+
+    # GET Request: Pass available room types to the template
     room_types = RoomType.objects.all()
     return render(request, 'room_add.html', {'room_types': room_types})
 
@@ -585,7 +699,7 @@ def add_room(request):
 @login_required
 @user_passes_test(lambda u: u.is_staff or u.is_superuser)
 def list_rooms(request):
-    rooms = Room.objects.select_related('room_type').all() # Fetch rooms with related room types
+    rooms = Room.objects.select_related('room_room_type').all() # Fetch rooms with related room types
     return render(request, 'rooms_list.html', {'rooms': rooms})
 
 
@@ -596,49 +710,63 @@ def edit_room(request, room_id):
     room_types = RoomType.objects.all()
 
     if request.method == 'POST':
-        room.name = request.POST.get('name')
-        room_type_id = request.POST.get('room_type')
-        room.room_type = RoomType.objects.get(id=room_type_id)
 
-        # Handle image upload if provided
-        if request.FILES.get('image'):
-            room.image = request.FILES['image']
+        # Update fields using correct model names
+        room.room_name = request.POST.get('room_name', '').strip()
+
+        room_type_id = request.POST.get('room_room_type')
+        room.room_room_type = get_object_or_404(RoomType, id=room_type_id)
+
+        # Image update only if uploaded
+        if 'room_image' in request.FILES:
+            room.room_image = request.FILES['room_image']
 
         room.save()
-        messages.success(request, f"Room '{room.name}' updated successfully!")
+
+        messages.success(request, f"Room '{room.room_name}' updated successfully!")
         return redirect('list_rooms')
 
-    return render(request, 'room_edit.html', {'room': room, 'room_types': room_types})
+    return render(request, 'room_edit.html', {
+        'room': room,
+        'room_types': room_types
+    })
 
 @login_required
 @user_passes_test(is_admin)
 def delete_room(request, room_id):
-    room = get_object_or_404(Room, id=room_id)
+    try:
+        room = Room.objects.get(id=room_id)
+    except Room.DoesNotExist:
+        messages.error(request, "Room does not exist.")
+        return redirect('list_rooms')
 
     if request.method == 'POST':
+        room_name = room.room_name
         room.delete()
-        messages.success(request, f"Room '{room.name}' deleted successfully!")
+        messages.success(request, f"Room '{room_name}' deleted successfully!")
         return redirect('list_rooms')
 
     return render(request, 'room_delete.html', {'room': room})
+
+
 
 @login_required
 @user_passes_test(is_admin)
 def add_tour(request):
     if request.method == 'POST':
-        name = request.POST.get('name')
-        destination = request.POST.get('destination')
-        description = request.POST.get('description')
-        price_per_person = request.POST.get('price_per_person')
+        tour_name = request.POST.get('tour_name')
+        tour_destination = request.POST.get('tour_destination')
+        tour_description = request.POST.get('tour_description')
+        tour_price_per_person = request.POST.get('tour_price_per_person')
         # Handle image upload if provided
-        image = request.FILES.get('image')
+        tour_image = request.FILES.get('tour_image')
         
         Tour.objects.create(
-            name=name,
-            destination=destination,
-            description=description,
-            price_per_person=price_per_person,
-            image=image
+            tour_name=tour_name,
+            tour_destination=tour_destination,
+            tour_description=tour_description,
+            tour_price_per_person=tour_price_per_person,
+            tour_image=tour_image
         )
         messages.success(request, "Room added successfully!")
         return redirect('tours')
@@ -656,40 +784,45 @@ def edit_tour(request, pk):
     tour = get_object_or_404(Tour, pk=pk)
     
     if request.method == 'POST':
-        tour.name = request.POST.get('name')
-        tour.destination = request.POST.get('destination')
-        tour.description = request.POST.get('description')
-        tour.price_per_person = request.POST.get('price_per_person')
+        tour.tour_name = request.POST.get('tour_name')
+        tour.tour_destination = request.POST.get('tour_destination')
+        tour.tour_description = request.POST.get('tour_description')
+        tour.tour_price_per_person = request.POST.get('tour_price_per_person')
         
         # Handle image upload if provided
-        if request.FILES.get('image'):
-            tour.image = request.FILES['image']
+        if request.FILES.get('tour_image'):
+            tour.tour_image = request.FILES['tour_image']
         
         tour.save()
         return redirect('tours')
     return render(request, 'tour.edit.html', {'tour': tour})
 
+@login_required
+@user_passes_test(admin_required)
 def delete_tour(request, pk):
     tour = get_object_or_404(Tour, pk=pk)
-    if request.method == 'POST':
-        tour.delete()
-        messages.success(request, "Tour deleted successfully!")
+    tour_name = tour.tour_name
+    tour.delete()
+    messages.success(request, f"Tour '{tour_name}' deleted successfully!")
     return redirect('tours')
+
+
 
 @login_required
 @user_passes_test(admin_required)
 def add_food(request):
     if request.method == 'POST':
-        name = request.POST.get('name')
-        price_per_person = request.POST.get('price_per_person')
+        food_name = request.POST.get('food_name')
+        food_price_per_person = request.POST.get('food_price_per_person')
 
         Food.objects.create(
-            name=name,
-            price_per_person=price_per_person
+            food_name=food_name,
+            food_price_per_person=food_price_per_person
         )
         messages.success(request, "Food item added successfully!")
         return redirect('food_list')
     return render(request, 'food.add.html')
+
 
 @login_required
 @user_passes_test(admin_required)
@@ -697,28 +830,33 @@ def food_list(request):
     foods = Food.objects.all()
     return render(request, 'food.list.html', {'foods': foods})
 
+
 @login_required
 @user_passes_test(admin_required)
 def edit_food(request, pk):
     food = get_object_or_404(Food, pk=pk)
 
     if request.method == 'POST':
-        food.name = request.POST.get('name')
-        food.price_per_person = request.POST.get('price_per_person')
+        food.food_name = request.POST.get('food_name')
+        food.food_price_per_person = request.POST.get('food_price_per_person')
         food.save()
         messages.success(request, "Food item updated successfully!")
         return redirect('food_list')
 
     return render(request, 'food.edit.html', {'food': food})
 
+
 @login_required
 @user_passes_test(admin_required)
 def delete_food(request, pk):
     food = get_object_or_404(Food, pk=pk)
     if request.method == 'POST':
+        food_name = food.food_name  # store name for message
         food.delete()
-        messages.success(request, "Food item deleted successfully!")
-    return redirect('food_list')
+        messages.success(request, f"Food item '{food_name}' deleted successfully!")
+        return redirect('food_list')
+    return render(request, 'food.delete.html', {'food': food})
+
 
 def book_room(request, pk):
     room = get_object_or_404(RoomType, pk=pk)
@@ -1222,7 +1360,7 @@ def create_booking(request):
         booking.booking_food.set(selected_food_ids)
         booking.booking_tours.set(selected_tour_ids)
 
-        messages.success(request, "Booking created successfully!")
+        messages.success(request, "Booking created successfully! Proceed to payment!")
         return redirect("pay_booking", booking_id=booking.id)
 
     # Choose base template dynamically
@@ -1250,6 +1388,11 @@ def create_booking(request):
 # --------------------------
 @login_required
 def admin_create_booking(request):
+    # Only admins/staff should access this.
+    if not (request.user.is_superuser or request.user.is_staff):
+        messages.error(request, "You are not allowed to access this page.")
+        return redirect("booking_list")
+
     users = User.objects.all().order_by("username")
     activities = Activity.objects.all()
     packages = Package.objects.all()
@@ -1263,14 +1406,19 @@ def admin_create_booking(request):
         booking_check_out = request.POST.get("check_out")
         booking_pax = int(request.POST.get("pax", 1))
 
+        if not selected_user_id:
+            messages.error(request, "Please select a user.")
+            return redirect("admin_create_booking")
+
+        # Create booking
         booking = Booking.objects.create(
-            booking_user=User.objects.get(id=selected_user_id) if selected_user_id else None,
+            booking_user=User.objects.get(id=selected_user_id),
             booking_check_in=booking_check_in,
             booking_check_out=booking_check_out,
             booking_pax=booking_pax
         )
 
-        # Set ManyToMany relationships
+        # M2M assignments
         booking.booking_activities.set(request.POST.getlist("activities"))
         booking.booking_packages.set(request.POST.getlist("packages"))
         booking.booking_rooms.set(request.POST.getlist("rooms"))
@@ -1280,14 +1428,16 @@ def admin_create_booking(request):
         messages.success(request, "Booking created for user successfully!")
         return redirect("booking_list")
 
-    return render(request, "booking_create_for_user.html", {
+    return render(request, "booking.create_for_user.html", {
         "users": users,
         "activities": activities,
         "packages": packages,
         "rooms": rooms,
         "food_items": food_items,
-        "tours": tours
+        "tours": tours,
+        "base_template": "base.admin.html"
     })
+
 
 # --------------------------
 # Bookings Payment
@@ -1354,7 +1504,7 @@ def upcoming_bookings_list(request):
 
     base_template = "base.admin.html" if request.user.is_superuser else "base.staff.html"
 
-    return render(request, "bookings_upcoming.html", {
+    return render(request, "bookings.upcoming.html", {
         "upcoming_bookings": upcoming_bookings,
         "base_template": base_template
     })
@@ -1363,6 +1513,49 @@ def upcoming_bookings_list(request):
 # --------------------------
 # Booking List
 # --------------------------
+
+# @login_required
+# def booking_list(request):
+#     # Prefetch related fields to reduce queries
+#     bookings = Booking.objects.prefetch_related(
+#         "booking_rooms",
+#         "booking_activities",
+#         "booking_packages",
+#         "booking_food",
+#         "booking_tours"
+#     ).order_by("-booking_created_at")
+
+#     today = timezone.localdate()
+    
+#     # Determine bookings based on role
+#     if request.user.is_superuser:
+#         # Admin sees all bookings
+#         filtered_bookings = bookings
+#         editable_ids = bookings.values_list("id", flat=True)
+#     elif request.user.is_staff:
+#         # Staff sees bookings that are upcoming or ongoing
+#         filtered_bookings = bookings.filter(booking_check_out__gte=today)
+#         editable_ids = filtered_bookings.values_list("id", flat=True)
+#     else:
+#         # Regular user sees only their own bookings
+#         filtered_bookings = bookings.filter(booking_user=request.user)
+#         editable_ids = filtered_bookings.values_list("id", flat=True)
+
+#     # Calculate total payable for user bookings
+#     total_payable = None
+#     if not request.user.is_superuser and not request.user.is_staff:
+#         total_payable = sum(b.amount_required for b in filtered_bookings)
+
+#     return render(request, "bookings.html", {
+#         "bookings": filtered_bookings,
+#         "editable_ids": set(editable_ids),
+#         "base_template": "base.admin.html" if request.user.is_superuser else
+#                          "base.staff.html" if request.user.is_staff else
+#                          "base.user.html",
+#         "total_payable": total_payable,
+#     })
+
+
 @login_required
 def booking_list(request):
     bookings = Booking.objects.prefetch_related(
@@ -1373,27 +1566,80 @@ def booking_list(request):
         "booking_tours"
     ).order_by("-booking_created_at")
 
+    # Search query
+    q = request.GET.get("q")
+    if q:
+        bookings = bookings.filter(
+            Q(booking_user__username__icontains=q) |
+            Q(booking_customer_name__icontains=q) |
+            Q(booking_customer_email__icontains=q)
+        )
+
+    mine = request.GET.get('mine') == '1'
+
+    base_template = "base.user.html"
+    editable_ids = []
+
     if request.user.is_superuser:
-        editable_ids = bookings.values_list("id", flat=True)
         base_template = "base.admin.html"
-        template_name = "bookings.html"
-    elif request.user.is_staff:
-        bookings = bookings.filter(booking_user=request.user)
+        if mine:
+            bookings = bookings.filter(booking_user=request.user)
         editable_ids = bookings.values_list("id", flat=True)
+
+    elif request.user.is_staff:
         base_template = "base.staff.html"
-        template_name = "bookings.html"
+        if mine:
+            bookings = bookings.filter(booking_user=request.user)
+        else:
+            bookings = bookings.filter(booking_check_out__gte=timezone.now())
+        editable_ids = bookings.values_list("id", flat=True)
+
     else:
         bookings = bookings.filter(booking_user=request.user)
         editable_ids = bookings.values_list("id", flat=True)
-        base_template = "base.user.html"
-        template_name = "bookings_users.html"
 
-    return render(request, template_name, {
+    total_payable = 0
+    if not request.user.is_superuser or mine:
+        for booking in bookings:
+            total = 0
+            for activity in booking.booking_activities.all():
+                total += activity.activity_price_per_person * booking.booking_pax
+            for package in booking.booking_packages.all():
+                total += package.package_price_per_person * booking.nights_spent
+            for room in booking.booking_rooms.all():
+                total += room.room_room_type.roomType_price_per_night * booking.nights_spent
+            for food in booking.booking_food.all():
+                total += food.food_price_per_person * booking.booking_pax
+            for tour in booking.booking_tours.all():
+                total += tour.tour_price_per_person
+
+            total_payable += total
+
+    return render(request, "bookings.html", {
         "bookings": bookings,
         "editable_ids": set(editable_ids),
-        "base_template": base_template
+        "base_template": base_template,
+        "total_payable": total_payable,
+        "mine": mine
     })
 
+
+@login_required
+def staff_bookings(request):
+    # Staff + Admin: view their own bookings in CARD FORMAT
+    my_bookings = Booking.objects.filter(booking_user=request.user).order_by("-booking_created_at")
+
+    
+    if request.user.is_superuser:
+        base_template = "base.admin.html"
+    else:
+        base_template = "base.staff.html"
+    
+
+    return render(request, "staff.bookings.html", {
+        "bookings": my_bookings,
+        "base_template": base_template
+    })
 
 # --------------------------
 # Edit Booking
@@ -1480,6 +1726,104 @@ def delete_booking(request, pk):
     return redirect("booking_list")
 
 
+@login_required
+@user_passes_test(lambda u: u.is_superuser or u.is_staff)
+def print_bookings(request):
+
+    if request.method == "POST":
+        # Get selected booking IDs for printing
+        booking_ids = request.POST.getlist('booking_ids')
+
+        # Get search query
+        q = request.POST.get("q", "")
+
+        # Base queryset
+        if booking_ids:
+            bookings = Booking.objects.filter(id__in=booking_ids).order_by('-booking_created_at')
+        else:
+            bookings = Booking.objects.all().order_by('-booking_created_at')
+
+        # Apply search filter
+        if q:
+            bookings = bookings.filter(
+                Q(booking_user__username__icontains=q) |
+                Q(booking_customer_name__icontains=q) |
+                Q(booking_customer_email__icontains=q)
+            )
+
+        total_bookings = bookings.count()
+        total_payable = sum([b.amount_required for b in bookings])
+
+        # PDF setup
+        buffer = io.BytesIO()
+        p = canvas.Canvas(buffer, pagesize=A4)
+        width, height = A4
+
+        # Title
+        p.setFont("Helvetica-Bold", 18)
+        p.drawString(50, height - 50, "EpicTrail Adventures - Bookings Report")
+        p.setFont("Helvetica", 10)
+        p.drawString(50, height - 70, f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+
+        # Summary
+        y = height - 100
+        p.setFont("Helvetica-Bold", 12)
+        p.drawString(50, y, f"Total Bookings: {total_bookings}")
+        p.drawString(200, y, f"Total Payable: KSh {total_payable:,.2f}")
+        y -= 30
+
+        # Table headers
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(50, y, "Customer")
+        p.drawString(170, y, "Booking Services")
+        p.drawString(470, y, "Check-In")
+        p.drawString(540, y, "Booked On")
+        p.drawString(610, y, "Total KSh")
+        p.setFont("Helvetica", 9)
+        y -= 20
+
+        # Helper to truncate long text
+        def truncate_list(items, limit=50):
+            text = ', '.join(str(i) for i in items)
+            return text if len(text) <= limit else text[:limit] + '...'
+
+        for b in bookings:
+            if y < 80:  # New page if too close to bottom
+                p.showPage()
+                y = height - 50
+                p.setFont("Helvetica", 9)
+
+            customer = b.booking_user.username if b.booking_user else b.booking_customer_name or "Guest"
+            services = truncate_list(
+                list(b.booking_activities.all()) +
+                list(b.booking_packages.all()) +
+                list(b.booking_rooms.all()) +
+                list(b.booking_food.all()) +
+                list(b.booking_tours.all())
+            )
+            check_in = b.booking_check_in.strftime("%Y-%m-%d") if b.booking_check_in else "N/A"
+            booked_on = b.booking_created_at.strftime("%Y-%m-%d") if b.booking_created_at else "N/A"
+            total = f"KSh {b.amount_required:,.2f}"
+
+            p.drawString(50, y, customer)
+            p.drawString(170, y, services)
+            p.drawString(470, y, check_in)
+            p.drawString(540, y, booked_on)
+            p.drawString(610, y, total)
+            y -= 20
+
+        p.showPage()
+        p.save()
+
+        pdf = buffer.getvalue()
+        buffer.close()
+
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = "attachment; filename=Bookings_Report.pdf"
+        return response
+
+    # Redirect to bookings page if GET
+    return redirect('booking_list')
 
 
 
@@ -1526,109 +1870,282 @@ def explore(request):
         'base_template': base_template,
     })
 
+
+# @login_required
+# @user_passes_test(admin_required)
+# def reports_analytics(request):
+#     # --- Determine if admin or regular user ---
+#     if request.user.is_superuser:
+#         bookings = Booking.objects.all()
+#         orders = FoodOrder.objects.all()
+#     else:
+#         today = timezone.now().date()
+#         bookings = Booking.objects.filter(booking_user=request.user, booking_check_in__gte=today)
+#         orders = FoodOrder.objects.filter(foodOrder_user=request.user)
+
+#     total_bookings = bookings.count()
+#     total_revenue = sum(b.amount_required for b in bookings)
+
+#     # Food orders
+#     total_orders = orders.count()
+#     orders_with_total = orders.annotate(
+#         order_total=ExpressionWrapper(
+#             F("foodOrder_food__food_price_per_person") * F("foodOrder_quantity"),
+#             output_field=DecimalField()
+#         )
+#     )
+#     total_order_revenue = orders_with_total.aggregate(total=Sum("order_total"))["total"] or 0
+
+#     # Revenue by category
+#     revenue_activities = sum(sum(a.activity_price_per_person * b.booking_pax for a in b.booking_activities.all()) for b in bookings)
+#     revenue_packages = sum(sum(p.package_price_per_person * b.booking_pax for p in b.booking_packages.all()) for b in bookings)
+#     revenue_rooms = sum(sum(r.room_room_type.roomType_price_per_night * b.booking_pax * b.nights_spent for r in b.booking_rooms.all()) for b in bookings)
+#     revenue_tours = sum(sum(t.tour_price_per_person * b.booking_pax for t in b.booking_tours.all()) for b in bookings)
+
+#     # Monthly data (only for bookings)
+#     monthly_data = (
+#         bookings.annotate(month=ExtractMonth('booking_created_at'))
+#         .values('month')
+#         .annotate(total=Count('id'), revenue=Sum('paid'))
+#     )
+#     months = [calendar.month_abbr[i] for i in range(1, 13)]
+#     monthly_bookings = [0] * 12
+#     monthly_revenue = [0] * 12
+#     for entry in monthly_data:
+#         idx = entry['month'] - 1
+#         monthly_bookings[idx] = entry['total']
+#         monthly_revenue[idx] = float(entry['revenue'] or 0)
+
+#     # Pie chart data
+#     pie_labels = ["Activities", "Packages", "Rooms", "Tours", "Food Orders"]
+#     pie_data = [revenue_activities, revenue_packages, revenue_rooms, revenue_tours, total_order_revenue]
+
+#     # Top booked items
+#     popular_activities = Activity.objects.annotate(num_bookings=Count('booking')).order_by('-num_bookings')[:5]
+#     popular_packages = Package.objects.annotate(num_bookings=Count('booking')).order_by('-num_bookings')[:5]
+#     popular_rooms = Room.objects.annotate(num_bookings=Count('booking')).order_by('-num_bookings')[:5]
+#     popular_tours = Tour.objects.annotate(num_bookings=Count('booking')).order_by('-num_bookings')[:5]
+
+#     # --- CSV Export ---
+#     if request.GET.get("export") == "csv":
+#         response = HttpResponse(content_type="text/csv")
+#         response["Content-Disposition"] = f'attachment; filename="EpicTrail-Report_{datetime.now().strftime("%Y%m%d")}.csv"'
+#         writer = csv.writer(response)
+
+#         # Bookings
+#         writer.writerow(["--- BOOKINGS REPORT ---"])
+#         writer.writerow(["Customer", "Booking Date", "Guests", "Revenue (KSh)"])
+#         bookings_total = 0
+#         for b in bookings:
+#             customer = str(b.booking_user) if b.booking_user else (b.booking_customer_name or "Guest")
+#             booking_date = b.booking_created_at.strftime('%Y-%m-%d')
+#             revenue = round(b.amount_required, 2)
+#             bookings_total += revenue
+#             writer.writerow([customer, booking_date, b.booking_pax, revenue])
+#         writer.writerow(["", "", "Total Bookings Revenue", bookings_total])
+#         writer.writerow([])
+
+#         # Food orders
+#         writer.writerow(["--- FOOD ORDERS REPORT ---"])
+#         writer.writerow(["Customer", "Order Date", "Food Item", "Quantity", "Revenue (KSh)"])
+#         food_total = 0
+#         for o in orders_with_total:
+#             customer = str(o.foodOrder_user) if o.foodOrder_user else "Guest"
+#             order_date = o.foodOrder_created_at.strftime('%Y-%m-%d')
+#             revenue = round(o.order_total, 2)
+#             food_total += revenue
+#             writer.writerow([customer, order_date, o.foodOrder_food.food_name, o.foodOrder_quantity, revenue])
+#         writer.writerow(["", "", "", "Total Food Revenue", food_total])
+#         return response
+
+#     # --- PDF Export ---
+#     if request.GET.get("export") == "pdf":
+#         response = HttpResponse(content_type="application/pdf")
+#         response["Content-Disposition"] = f'attachment; filename="EpicTrail-Report_{datetime.now().strftime("%Y%m%d")}.pdf"'
+#         p = canvas.Canvas(response, pagesize=A4)
+#         width, height = A4
+
+#         # Title
+#         p.setFont("Helvetica-Bold", 18)
+#         p.drawString(50, height - 50, "EpicTrail Adventures - Analytics Report")
+#         p.setFont("Helvetica", 10)
+#         p.drawString(50, height - 70, f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+
+#         # Bookings Section
+#         y = height - 110
+#         p.setFont("Helvetica-Bold", 14)
+#         p.drawString(50, y, "Bookings Report")
+#         y -= 30
+#         p.setFont("Helvetica-Bold", 12)
+#         p.drawString(50, y, "Customer")
+#         p.drawString(200, y, "Booking Date")
+#         p.drawString(350, y, "Revenue (KSh)")
+#         p.setFont("Helvetica", 10)
+#         bookings_total = 0
+#         for b in bookings:
+#             y -= 20
+#             if y < 80:
+#                 p.showPage()
+#                 y = height - 50
+#             customer = str(b.booking_user) if b.booking_user else (b.booking_customer_name or "Guest")
+#             booking_date = b.booking_created_at.strftime('%Y-%m-%d')
+#             revenue = round(b.amount_required, 2)
+#             bookings_total += revenue
+#             p.drawString(50, y, customer)
+#             p.drawString(200, y, booking_date)
+#             p.drawString(350, y, f"KSh {revenue:,.2f}")
+#         y -= 30
+#         p.setFont("Helvetica-Bold", 12)
+#         p.drawString(50, y, f"Total Bookings Revenue: KSh {bookings_total:,.2f}")
+
+#         # Food Orders Section
+#         y -= 60
+#         p.setFont("Helvetica-Bold", 14)
+#         p.drawString(50, y, "Food Orders Report")
+#         y -= 30
+#         p.setFont("Helvetica-Bold", 12)
+#         p.drawString(50, y, "Customer")
+#         p.drawString(200, y, "Order Date")
+#         p.drawString(300, y, "Food Item")
+#         p.drawString(450, y, "Revenue (KSh)")
+#         p.setFont("Helvetica", 10)
+#         food_total = 0
+#         for o in orders_with_total:
+#             y -= 20
+#             if y < 80:
+#                 p.showPage()
+#                 y = height - 50
+#             customer = str(o.foodOrder_user) if o.foodOrder_user else "Guest"
+#             order_date = o.foodOrder_created_at.strftime('%Y-%m-%d')
+#             revenue = round(o.order_total, 2)
+#             food_total += revenue
+#             p.drawString(50, y, customer)
+#             p.drawString(200, y, order_date)
+#             p.drawString(300, y, o.foodOrder_food.food_name)
+#             p.drawString(450, y, f"KSh {revenue:,.2f}")
+#         y -= 30
+#         p.setFont("Helvetica-Bold", 12)
+#         p.drawString(50, y, f"Total Food Revenue: KSh {food_total:,.2f}")
+
+#         p.showPage()
+#         p.save()
+#         return response
+
+#     # --- Web render ---
+#     return render(request, "reports_analytics.html", {
+#         "bookings": bookings,
+#         "total_bookings": total_bookings,
+#         "total_revenue": total_revenue,
+#         "revenue_activities": revenue_activities,
+#         "revenue_packages": revenue_packages,
+#         "revenue_rooms": revenue_rooms,
+#         "revenue_tours": revenue_tours,
+#         "total_orders": total_orders,
+#         "total_order_revenue": total_order_revenue,
+#         "months": months,
+#         "monthly_bookings": monthly_bookings,
+#         "monthly_revenue": monthly_revenue,
+#         "pie_labels": pie_labels,
+#         "pie_data": pie_data,
+#         "popular_activities": popular_activities,
+#         "popular_packages": popular_packages,
+#         "popular_rooms": popular_rooms,
+#         "popular_tours": popular_tours,
+#     })
 @login_required
-@user_passes_test(lambda u: u.is_superuser)  # Only admin
+@user_passes_test(admin_required)
 def reports_analytics(request):
-    from .models import Booking, Activity, Package, Room, Tour, FoodOrder
+    # --- Determine if admin or regular user ---
+    if request.user.is_superuser:
+        bookings = Booking.objects.all().order_by('-booking_created_at')
+        orders = FoodOrder.objects.all().order_by('-foodOrder_created_at')
+    else:
+        today = timezone.now().date()
+        bookings = Booking.objects.filter(booking_user=request.user, booking_check_in__gte=today)
+        orders = FoodOrder.objects.filter(foodOrder_user=request.user)
 
-    # --- Bookings ---
-    bookings = Booking.objects.all()
     total_bookings = bookings.count()
-    total_revenue = sum(b.amount_required for b in bookings)
+    total_revenue = sum(b.paid for b in bookings)
 
-    # --- Food Orders ---
-    orders = FoodOrder.objects.all()
+    # Food orders
     total_orders = orders.count()
-
-    # Calculate revenue: food price * quantity
     orders_with_total = orders.annotate(
         order_total=ExpressionWrapper(
-            F("food__price_per_person") * F("quantity"),
+            F("foodOrder_food__food_price_per_person") * F("foodOrder_quantity"),
             output_field=DecimalField()
         )
     )
     total_order_revenue = orders_with_total.aggregate(total=Sum("order_total"))["total"] or 0
 
-    # --- Revenue by category (bookings) ---
+    # Revenue by category
     revenue_activities = sum(
-        sum(a.price_per_person * b.pax for a in b.activities.all()) for b in bookings
+        sum(a.activity_price_per_person * b.booking_pax for a in b.booking_activities.all()) for b in bookings
     )
     revenue_packages = sum(
-        sum(p.price_per_person * b.pax for p in b.packages.all()) for b in bookings
+        sum(p.package_price_per_person * b.booking_pax for p in b.booking_packages.all()) for b in bookings
     )
     revenue_rooms = sum(
-        sum(r.room_type.price_per_night * b.pax * b.nights_spent for r in b.rooms.all()) for b in bookings
+        sum(r.room_room_type.roomType_price_per_night * b.booking_pax * b.nights_spent for r in b.booking_rooms.all()) for b in bookings
     )
     revenue_tours = sum(
-        sum(t.price_per_person * b.pax for t in b.tours.all()) for b in bookings
+        sum(t.tour_price_per_person * b.booking_pax for t in b.booking_tours.all()) for b in bookings
     )
 
-    # --- Monthly performance (bookings only) ---
-    monthly_data = (
-        bookings.annotate(month=ExtractMonth('created_at'))
-        .values('month')
-        .annotate(total=Count('id'), revenue=Sum('paid'))
-    )
-
+    # --- Monthly data using amount_required property ---
     months = [calendar.month_abbr[i] for i in range(1, 13)]
     monthly_bookings = [0] * 12
     monthly_revenue = [0] * 12
-    for entry in monthly_data:
-        idx = entry['month'] - 1
-        monthly_bookings[idx] = entry['total']
-        monthly_revenue[idx] = float(entry['revenue'] or 0)
+    for b in bookings:
+        month_idx = b.booking_created_at.month - 1
+        monthly_bookings[month_idx] += 1
+        monthly_revenue[month_idx] += float(b.paid)
 
-    # --- Pie chart (bookings + food orders) ---
+    # Pie chart data
     pie_labels = ["Activities", "Packages", "Rooms", "Tours", "Food Orders"]
     pie_data = [revenue_activities, revenue_packages, revenue_rooms, revenue_tours, total_order_revenue]
 
-    # --- Top booked items ---
+    # Top booked items
     popular_activities = Activity.objects.annotate(num_bookings=Count('booking')).order_by('-num_bookings')[:5]
     popular_packages = Package.objects.annotate(num_bookings=Count('booking')).order_by('-num_bookings')[:5]
     popular_rooms = Room.objects.annotate(num_bookings=Count('booking')).order_by('-num_bookings')[:5]
     popular_tours = Tour.objects.annotate(num_bookings=Count('booking')).order_by('-num_bookings')[:5]
 
-    # ---------------- CSV Export ----------------
+    # --- CSV Export ---
     if request.GET.get("export") == "csv":
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = f'attachment; filename="EpicTrail-Report_{datetime.now().strftime("%Y%m%d")}.csv"'
         writer = csv.writer(response)
 
-        # --- Bookings Report ---
+        # Bookings
         writer.writerow(["--- BOOKINGS REPORT ---"])
         writer.writerow(["Customer", "Booking Date", "Guests", "Revenue (KSh)"])
         bookings_total = 0
         for b in bookings:
-            customer = getattr(b, "display_customer", str(b.customer_name))
-            booking_date = b.created_at.strftime('%Y-%m-%d')
+            customer = str(b.booking_user) if b.booking_user else (b.booking_customer_name or "Guest")
+            booking_date = b.booking_created_at.strftime('%Y-%m-%d')
             revenue = round(b.amount_required, 2)
             bookings_total += revenue
-            writer.writerow([customer, booking_date, b.pax, revenue])
-
+            writer.writerow([customer, booking_date, b.booking_pax, revenue])
         writer.writerow(["", "", "Total Bookings Revenue", bookings_total])
         writer.writerow([])
 
-        # --- Food Orders Report ---
+        # Food orders
         writer.writerow(["--- FOOD ORDERS REPORT ---"])
         writer.writerow(["Customer", "Order Date", "Food Item", "Quantity", "Revenue (KSh)"])
         food_total = 0
         for o in orders_with_total:
-            customer = str(o.user) if o.user else "Guest"
-            order_date = o.created_at.strftime('%Y-%m-%d')
-            food_name = o.food.name
+            customer = str(o.foodOrder_user) if o.foodOrder_user else "Guest"
+            order_date = o.foodOrder_created_at.strftime('%Y-%m-%d')
             revenue = round(o.order_total, 2)
             food_total += revenue
-            writer.writerow([customer, order_date, food_name, o.quantity, revenue])
-
+            writer.writerow([customer, order_date, o.foodOrder_food.food_name, o.foodOrder_quantity, revenue])
         writer.writerow(["", "", "", "Total Food Revenue", food_total])
-
         return response
 
-    # ---------------- PDF Export ----------------
+    # --- PDF Export ---
     if request.GET.get("export") == "pdf":
         response = HttpResponse(content_type="application/pdf")
         response["Content-Disposition"] = f'attachment; filename="EpicTrail-Report_{datetime.now().strftime("%Y%m%d")}.pdf"'
-
         p = canvas.Canvas(response, pagesize=A4)
         width, height = A4
 
@@ -1638,7 +2155,7 @@ def reports_analytics(request):
         p.setFont("Helvetica", 10)
         p.drawString(50, height - 70, f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
 
-        # --- Bookings Section ---
+        # Bookings Section
         y = height - 110
         p.setFont("Helvetica-Bold", 14)
         p.drawString(50, y, "Bookings Report")
@@ -1648,26 +2165,27 @@ def reports_analytics(request):
         p.drawString(200, y, "Booking Date")
         p.drawString(350, y, "Revenue (KSh)")
         p.setFont("Helvetica", 10)
-
         bookings_total = 0
         for b in bookings:
             y -= 20
             if y < 80:
                 p.showPage()
                 y = height - 50
-            customer = getattr(b, "display_customer", str(b.customer_name))
-            booking_date = b.created_at.strftime('%Y-%m-%d')
+                # Reset font after new page
+                p.setFont("Helvetica", 10)
+
+            customer = str(b.booking_user) if b.booking_user else (b.booking_customer_name or "Guest")
+            booking_date = b.booking_created_at.strftime('%Y-%m-%d')
             revenue = round(b.amount_required, 2)
             bookings_total += revenue
             p.drawString(50, y, customer)
             p.drawString(200, y, booking_date)
             p.drawString(350, y, f"KSh {revenue:,.2f}")
-
         y -= 30
         p.setFont("Helvetica-Bold", 12)
         p.drawString(50, y, f"Total Bookings Revenue: KSh {bookings_total:,.2f}")
 
-        # --- Food Orders Section ---
+        # Food Orders Section
         y -= 60
         p.setFont("Helvetica-Bold", 14)
         p.drawString(50, y, "Food Orders Report")
@@ -1678,23 +2196,23 @@ def reports_analytics(request):
         p.drawString(300, y, "Food Item")
         p.drawString(450, y, "Revenue (KSh)")
         p.setFont("Helvetica", 10)
-
         food_total = 0
         for o in orders_with_total:
             y -= 20
             if y < 80:
                 p.showPage()
                 y = height - 50
-            customer = str(o.user) if o.user else "Guest"
-            order_date = o.created_at.strftime('%Y-%m-%d')
-            food_name = o.food.name
+                # Reset font after new page
+                p.setFont("Helvetica", 10)
+
+            customer = str(o.foodOrder_user) if o.foodOrder_user else "Guest"
+            order_date = o.foodOrder_created_at.strftime('%Y-%m-%d')
             revenue = round(o.order_total, 2)
             food_total += revenue
             p.drawString(50, y, customer)
             p.drawString(200, y, order_date)
-            p.drawString(300, y, food_name)
+            p.drawString(300, y, o.foodOrder_food.food_name)
             p.drawString(450, y, f"KSh {revenue:,.2f}")
-
         y -= 30
         p.setFont("Helvetica-Bold", 12)
         p.drawString(50, y, f"Total Food Revenue: KSh {food_total:,.2f}")
@@ -1703,7 +2221,7 @@ def reports_analytics(request):
         p.save()
         return response
 
-    # ---------------- Web Render ----------------
+    # --- Web render ---
     return render(request, "reports_analytics.html", {
         "bookings": bookings,
         "total_bookings": total_bookings,
@@ -1725,36 +2243,62 @@ def reports_analytics(request):
         "popular_tours": popular_tours,
     })
 
-
 # --- USERS ---
-
 @login_required
 def place_order(request):
-    foods = Food.objects.all()
+    foods = Food.objects.all() 
 
     if request.method == "POST":
         food_id = request.POST.get("food")
         quantity = int(request.POST.get("quantity"))
-        check_in = request.POST.get("check_in")
+        check_in = request.POST.get("foodOrder_check_in")  # get date from form
 
-        food = get_object_or_404(Food, id=food_id)
+        food_item = get_object_or_404(Food, id=food_id)
 
-        # Create the order first
         order = FoodOrder.objects.create(
-            user=request.user,
-            food=food,
-            quantity=quantity,
-            check_in=check_in,
-            status="Pending"
+            foodOrder_user=request.user,
+            foodOrder_food=food_item,
+            foodOrder_quantity=quantity,
+            foodOrder_status="pending",
+            foodOrder_check_in=check_in
         )
 
-        # Calculate total amount
-        amount = food.price_per_person * quantity
+        messages.success(request, 'Order placed successfully, Please proceed to payment! Enter phone number to complete transaction.')
 
-        # Redirect to payment page for this order
         return redirect('pay_food_order', order_id=order.id)
 
     return render(request, "place_order.html", {"foods": foods})
+
+@login_required
+def update_order(request, order_id):
+    # Get the order for the current user and only if it's pending
+    order = get_object_or_404(FoodOrder, id=order_id, foodOrder_user=request.user, foodOrder_status='pending')
+    foods = Food.objects.all()
+
+    if request.method == "POST":
+        # Get data from the form
+        food_id = request.POST.get("food")
+        quantity = int(request.POST.get("quantity", order.foodOrder_quantity))
+        check_in = request.POST.get("foodOrder_check_in")
+
+        # Get the selected food
+        food = get_object_or_404(Food, id=food_id)
+
+        # Update order fields
+        order.foodOrder_food = food
+        order.foodOrder_quantity = quantity
+        order.foodOrder_check_in = check_in
+        order.save()
+
+        messages.success(request, "Order updated successfully.")
+        return redirect('my_orders')
+
+    return render(request, 'update_order.html', {
+        'order': order,
+        'foods': foods
+    })
+
+
 
 
 # @login_required
@@ -1798,9 +2342,8 @@ def place_order(request):
 @login_required
 def pay_food_order(request, order_id):
     order = get_object_or_404(FoodOrder, id=order_id)
-    total_amount = order.food.price_per_person * order.quantity
+    total_amount = order.total_price()
 
-    # Dynamic base template
     base_template = (
         "base.admin.html" if request.user.is_superuser
         else "base.staff.html" if request.user.is_staff
@@ -1811,12 +2354,10 @@ def pay_food_order(request, order_id):
         phone = request.POST.get("phone")
         response = initiate_stk_push(phone, total_amount)
 
-        # Check M-Pesa response
         if response.get("ResponseCode") == "0":
             messages.success(request, "STK Push initiated! Check your phone to complete the payment.")
         else:
-            error_msg = response.get("errorMessage", "Failed to initiate payment. Please try again.")
-            messages.error(request, f"STK Push failed: {error_msg}")
+            messages.error(request, response.get("errorMessage", "Failed to initiate payment."))
 
         return redirect("my_orders")
 
@@ -1825,6 +2366,7 @@ def pay_food_order(request, order_id):
         "total_amount": total_amount,
         "base_template": base_template,
     })
+
 
 
 
@@ -1837,51 +2379,331 @@ def food_menu(request):
 # User viewing his or her placed orders only
 @login_required
 def my_orders(request):
-    orders = FoodOrder.objects.filter(user=request.user)
+    orders = FoodOrder.objects.filter(foodOrder_user=request.user)  # <-- fix here
     return render(request, 'my_orders.html', {'orders': orders})
+
 
 # User udpdating his or her orders only
 @login_required
 def update_order(request, order_id):
-    order = get_object_or_404(FoodOrder, id=order_id, user=request.user, status='pending')
+    order = get_object_or_404(
+        FoodOrder, 
+        id=order_id, 
+        foodOrder_user=request.user,
+        foodOrder_status='pending'
+    )
+
+    foods = Food.objects.all()  # Fetch all food items to populate the select dropdown
+
     if request.method == 'POST':
-        order.quantity = int(request.POST.get('quantity', order.quantity))
+        food_id = request.POST.get('food')
+        quantity = int(request.POST.get('quantity', order.foodOrder_quantity))
+        check_in = request.POST.get('foodOrder_check_in')
+
+        if food_id:
+            food_item = get_object_or_404(Food, id=food_id)
+            order.foodOrder_food = food_item
+
+        order.foodOrder_quantity = quantity
+        order.foodOrder_check_in = check_in
+        order.total_price = order.foodOrder_food.food_price_per_person * quantity
         order.save()
+
         messages.info(request, "Order updated.")
         return redirect('my_orders')
-    return render(request, 'update_order.html', {'order': order})
+
+    return render(request, 'update_order.html', {'order': order, 'foods': foods})
+
+@login_required
+@user_passes_test(is_admin)
+def update_order_admin(request, order_id):
+    order = get_object_or_404(FoodOrder, id=order_id)
+    foods = Food.objects.all()
+    users = User.objects.all()
+
+    # Add your status list (or load from DB)
+    food_statuses = ["Pending", "Approved", "Completed", "Cancelled"]
+
+    if request.method == "POST":
+        # Update user (optional)
+        user_id = request.POST.get("user")
+        if user_id:
+            order.foodOrder_user = get_object_or_404(User, id=user_id)
+        else:
+            order.foodOrder_user = None  # Guest
+
+        # Update food
+        food_id = request.POST.get("food")
+        if food_id:
+            food_item = get_object_or_404(Food, id=food_id)
+            order.foodOrder_food = food_item
+            order.total_price = food_item.food_price_per_person * int(request.POST.get("quantity", 1))
+
+        # Update quantity
+        quantity = int(request.POST.get("quantity", order.foodOrder_quantity))
+        order.foodOrder_quantity = quantity
+        if order.foodOrder_food:
+            order.total_price = order.foodOrder_food.food_price_per_person * quantity
+
+        # Update check-in date
+        order.foodOrder_check_in = request.POST.get("check_in")
+
+        # ⭐ NEW: Update status (same structure as food)
+        status = request.POST.get("foodOrder_status")
+        if status:
+            order.foodOrder_status = status
+
+        # Save changes
+        order.save()
+        messages.success(request, f"Order #{order.id} updated successfully.")
+        return redirect("manage_orders")
+
+    context = {
+        "order": order,
+        "foods": foods,
+        "users": users,
+        "food_statuses": food_statuses,  # Pass to template
+    }
+    return render(request, "update_order_admin.html", context)
+
+
+@login_required
+@user_passes_test(is_admin)
+def delete_order_admin(request, order_id):
+    order = get_object_or_404(FoodOrder, id=order_id)
+    order.delete()
+    messages.success(request, f"Order #{order_id} has been deleted.")
+    return redirect('manage_orders')
+
 
 # User canceling or deleting his or her orders only
 @login_required
 def cancel_order(request, order_id):
-    order = get_object_or_404(FoodOrder, id=order_id, user=request.user, status='pending')
-    order.status = 'cancelled'
+    order = get_object_or_404(
+        FoodOrder, 
+        id=order_id, 
+        foodOrder_user=request.user,  # <-- fix here
+        foodOrder_status='pending'
+    )
+    order.foodOrder_status = 'cancelled'
     order.save()
     messages.warning(request, "Order cancelled.")
     return redirect('my_orders')
+
+@login_required
+def download_order_receipt(request, order_id):
+    # Ensures the user can only download their own orders
+    order = get_object_or_404(FoodOrder, id=order_id, foodOrder_user=request.user)
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="order_{order.id}_receipt.pdf"'
+
+    # Small receipt size (width=250, height=450 points)
+    page_width = 250
+    page_height = 450
+    p = canvas.Canvas(response, pagesize=(page_width, page_height))
+
+    # Title
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(20, page_height - 30, "Order Receipt")
+
+    # Starting Y position
+    y = page_height - 60
+    p.setFont("Helvetica", 10)
+
+    # User info
+    p.drawString(20, y, f"Customer: {order.foodOrder_user.username}")
+    y -= 20
+    p.drawString(20, y, f"Order ID: {order.id}")
+    y -= 20
+    p.drawString(20, y, f"Date Ordered: {order.foodOrder_created_at.strftime('%b %d, %Y')}")
+    y -= 20
+
+    # Check-In
+    if order.foodOrder_check_in:
+        p.drawString(20, y, f"Check-In: {order.foodOrder_check_in.strftime('%b %d, %Y')}")
+        y -= 20
+
+    # Optional Check-Out if your model ever includes it
+    # if hasattr(order, 'foodOrder_check_out') and order.foodOrder_check_out:
+    #     p.drawString(20, y, f"Check-Out: {order.foodOrder_check_out.strftime('%b %d, %Y')}")
+    #     y -= 20
+
+    # Order details
+    p.drawString(20, y, f"Food: {order.foodOrder_food.food_name}")
+    y -= 20
+    p.drawString(20, y, f"Quantity: {order.foodOrder_quantity}")
+    y -= 20
+    p.drawString(20, y, f"Total: Ksh {order.total_price():.2f}")
+    y -= 20
+    p.drawString(20, y, f"Status: {order.foodOrder_status.title()}")
+
+    # Footer
+    p.drawString(20, 20, "Thank you for your order!")
+
+    p.showPage()
+    p.save()
+
+    return response
 
 # Admin managing all food orders operations
 @login_required
 @user_passes_test(is_admin)
 def manage_orders(request):
-    orders = FoodOrder.objects.all().order_by('-created_at')
+    orders = FoodOrder.objects.all().order_by('-foodOrder_created_at')
 
+    # Search functionality
+    q = request.GET.get("q", "")
+    if q:
+        orders = orders.filter(
+            Q(foodOrder_user__username__icontains=q) |
+            Q(foodOrder_user__email__icontains=q) |
+            Q(foodOrder_food__food_name__icontains=q) |
+            Q(foodOrder_status__icontains=q)  # <-- Include status
+        )
+
+    # POST actions (approve, cancel, complete)
     if request.method == "POST":
         order_id = request.POST.get("order_id")
         action = request.POST.get("action")
         order = get_object_or_404(FoodOrder, id=order_id)
 
         if action == "approve":
-            order.status = "Approved"
+            order.foodOrder_status = "Approved"
         elif action == "cancel":
-            order.status = "Cancelled"
+            order.foodOrder_status = "Cancelled"
         elif action == "completed":
-            order.status = "Completed"
+            order.foodOrder_status = "Completed"
+
         order.save()
         return redirect("manage_orders")
 
     return render(request, "manage_orders.html", {"orders": orders})
 
+@login_required
+@user_passes_test(is_admin)
+def print_orders(request):
+
+    # Get selected order IDs
+    order_ids = request.POST.getlist('order_ids')
+
+    # Get filter/search parameters
+    q = request.POST.get("q") or request.GET.get("q", "").strip()
+    status_filter = request.POST.get("status") or request.GET.get("status", "").strip()
+    check_in_filter = request.POST.get("check_in") or request.GET.get("check_in", "").strip()
+
+    # Base queryset
+    if order_ids:
+        orders = FoodOrder.objects.filter(id__in=order_ids)
+    else:
+        orders = FoodOrder.objects.all()
+
+    # Apply search filter
+    if q:
+        orders = orders.filter(
+            Q(foodOrder_user__username__icontains=q) |
+            Q(foodOrder_food__food_name__icontains=q)
+        )
+
+    # Filter by status
+    if status_filter:
+        orders = orders.filter(foodOrder_status=status_filter)
+
+    # Filter by check-in date
+    if check_in_filter:
+        orders = orders.filter(foodOrder_check_in=check_in_filter)
+
+    orders = orders.order_by('-foodOrder_created_at')
+
+    total_orders = orders.count()
+    total_revenue = sum([o.total_price if not callable(o.total_price) else o.total_price() for o in orders])
+
+    # PDF generation
+    response = HttpResponse(content_type="application/pdf")
+    response['Content-Disposition'] = f'attachment; filename="FoodOrders_Report.pdf"'
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+
+    # Title
+    p.setFont("Helvetica-Bold", 18)
+    p.drawString(50, height - 50, "EpicTrail Adventures - Food Orders Report")
+    p.setFont("Helvetica", 10)
+    p.drawString(50, height - 70, f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+
+    # Summary
+    y = height - 100
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(50, y, f"Printed Orders: {total_orders}")
+    p.drawString(200, y, f"Total Revenue: KSh {total_revenue:,.2f}")
+    y -= 30
+
+    # Table headers
+    p.drawString(50, y, "User")
+    p.drawString(170, y, "Food")
+    p.drawString(300, y, "Qty")
+    p.drawString(350, y, "Total Price")
+    p.drawString(450, y, "Status")
+    p.drawString(520, y, "Check-In")
+    p.setFont("Helvetica", 10)
+
+    for order in orders:
+        y -= 20
+        if y < 80:
+            p.showPage()
+            y = height - 50
+        user = order.foodOrder_user.username if order.foodOrder_user else "Guest"
+        food = order.foodOrder_food.food_name if order.foodOrder_food else "N/A"
+        qty = str(order.foodOrder_quantity)
+        total = f"KSh {order.total_price if not callable(order.total_price) else order.total_price():,.2f}"
+        status = order.foodOrder_status
+        checkin = order.foodOrder_check_in.strftime("%Y-%m-%d") if order.foodOrder_check_in else "N/A"
+
+        p.drawString(50, y, user)
+        p.drawString(170, y, food)
+        p.drawString(300, y, qty)
+        p.drawString(350, y, total)
+        p.drawString(450, y, status)
+        p.drawString(520, y, checkin)
+
+    p.showPage()
+    p.save()
+    pdf = buffer.getvalue()
+    buffer.close()
+    response.write(pdf)
+    return response
+
+
+@login_required
+@user_passes_test(is_admin)
+def place_order_admin(request):
+    users = User.objects.all()
+    foods = Food.objects.all()
+
+    if request.method == "POST":
+        user_id = request.POST.get("user")
+        food_id = request.POST.get("food")
+        quantity = int(request.POST.get("quantity", 1))
+        check_in = request.POST.get("check_in")
+
+        user = User.objects.get(id=user_id) if user_id else None
+        food = get_object_or_404(Food, id=food_id)
+
+        # Create the FoodOrder
+        order = FoodOrder.objects.create(
+            foodOrder_user=user,
+            foodOrder_food=food,
+            foodOrder_quantity=quantity,
+            foodOrder_check_in=check_in,
+            foodOrder_status="Pending"
+        )
+
+        return redirect("manage_orders")
+
+    return render(request, "place_order_admin.html", {
+        "users": users,
+        "foods": foods,
+    })
 
 from django.views.decorators.http import require_POST
 
@@ -1892,9 +2714,9 @@ def update_order_status(request, order_id):
     order = get_object_or_404(FoodOrder, id=order_id)
     new_status = request.POST.get('status')
     if new_status in dict(FoodOrder.STATUS_CHOICES).keys():
-        order.status = new_status
+        order.foodOrder_status = new_status
         order.save()
-        messages.success(request, f"Order #{order.id} updated to {new_status.capitalize()}.")
+        messages.success(request, f"Order #{order.id} updated to {new_status}.")
     else:
         messages.error(request, "Invalid status.")
     return redirect('manage_orders')
@@ -1904,114 +2726,136 @@ def update_order_status(request, order_id):
 @user_passes_test(admin_required)
 def assign_duty(request):
     staff_members = User.objects.filter(is_staff=True)
+
     if request.method == 'POST':
-        staff_id = request.POST.get('staff')
-        title = request.POST.get('title')
-        description = request.POST.get('description')
-        due_date = request.POST.get('due_date')
+        staff_id = request.POST.get('duty_staff')
+        duty_title = request.POST.get('duty_title')
+        duty_description = request.POST.get('duty_description')
+        duty_due_date = request.POST.get('duty_due_date')
+
+        # Validate staff selection
+        try:
+            staff_member = User.objects.get(id=staff_id)
+        except User.DoesNotExist:
+            messages.error(request, "Selected staff member does not exist.")
+            return redirect('assign_duty')
+
+        if not duty_title or not duty_due_date:
+            messages.error(request, "Duty title and due date are required.")
+            return redirect('assign_duty')
 
         Duty.objects.create(
-            staff=User.objects.get(id=staff_id),
-            title=title,
-            description=description,
-            due_date=due_date
+            duty_staff=staff_member,
+            duty_title=duty_title,
+            duty_description=duty_description,
+            duty_due_date=duty_due_date
         )
         messages.success(request, "Duty assigned successfully.")
         return redirect('duties')
 
-    duties = Duty.objects.all().order_by('-assigned_on')
+    duties = Duty.objects.all().order_by('-duty_assigned_on')  # make sure this field exists
     return render(request, 'duty.assign.html', {
         'staff_members': staff_members,
         'duties': duties
     })
 
+
 @login_required
 @user_passes_test(admin_required)
 def duties(request):
-    duties = Duty.objects.all()
+    duties = Duty.objects.all().order_by('-duty_assigned_on')  # make sure field exists
     return render(request, 'duties.html', {'duties': duties})
+
 
 @login_required
 def update_duty_status(request, duty_id):
     duty = get_object_or_404(Duty, id=duty_id)
 
-    # Only the staff assigned to this duty OR an admin can update
-    if request.user != duty.staff and not request.user.is_superuser:
+    # Only assigned staff or admin can update
+    if request.user != duty.duty_staff and not request.user.is_superuser:
         return HttpResponseForbidden("You are not allowed to update this duty.")
 
     if request.method == 'POST':
-        duty.completed = not duty.completed  # Toggle status
+        duty.duty_completed = not duty.duty_completed  # Toggle
         duty.save()
-        messages.success(request, f"Duty '{duty.title}' marked as {'Completed' if duty.completed else 'Pending'}.")
+        messages.success(
+            request,
+            f"Duty '{duty.duty_title}' marked as {'Completed' if duty.duty_completed else 'Pending'}."
+        )
         return redirect('duties')
 
     return render(request, 'duty.update.html', {'duty': duty})
 
+
 @login_required
 def staff_duties(request):
-    """
-    Show all duties assigned to the logged-in staff member.
-    Allows staff to mark duties as completed or pending.
-    """
-    duties = Duty.objects.filter(staff=request.user).order_by('due_date')
+    duties = Duty.objects.filter(duty_staff=request.user).order_by('duty_due_date')  # use correct field name
 
     if request.method == "POST":
         duty_id = request.POST.get("duty_id")
-        duty = get_object_or_404(Duty, id=duty_id, staff=request.user)
-        duty.completed = not duty.completed  # Toggle status
+        duty = get_object_or_404(Duty, id=duty_id, duty_staff=request.user)
+        duty.duty_completed = not duty.duty_completed
         duty.save()
-        messages.success(request, f"Duty '{duty.title}' marked as {'Completed' if duty.completed else 'Pending'}.")
+        messages.success(
+            request,
+            f"Duty '{duty.duty_title}' marked as {'Completed' if duty.duty_completed else 'Pending'}."
+        )
         return redirect('staff_duties')
 
     return render(request, "duties.staff.html", {"duties": duties})
 
 
+
 @login_required
 def update_profile(request):
-    user = request.user
-    profile, created = Profile.objects.get_or_create(user=user)
+    # Retrieve the currently logged-in User object
+    current_user = request.user 
+    
+    # use 'profile_user' field name for get_or_create
+    profile, created = Profile.objects.get_or_create(profile_user=current_user)
 
     # Determine base template based on role
-    if user.is_superuser:
+    if current_user.is_superuser:
         base_template = 'base.admin.html'
-    elif user.is_staff:
+    elif current_user.is_staff:
         base_template = 'base.staff.html'
     else:
         base_template = 'base.user.html'
 
     if request.method == 'POST':
+        # Retrieve form data
         username = request.POST.get('username')
         email = request.POST.get('email')
         password = request.POST.get('password')
-        photo = request.FILES.get('photo')
+        profile_photo = request.FILES.get('photo')
 
-        user.username = username
-        user.email = email
+        # Update User fields
+        current_user.username = username
+        current_user.email = email
 
         if password:
-            user.set_password(password)
+            current_user.set_password(password)
 
-        user.save()
+        current_user.save()
 
-        if photo:
-            profile.photo = photo
-            profile.save()
-
-        # if password:
-        #     return redirect('login')  # Require re-login if password changed
-        # return redirect('user_dashboard')
+        # Update Profile fields
+        if profile_photo:
+            profile.profile_photo = profile_photo
+        
+        profile.save() # Save the profile even if only the photo was updated
 
         messages.success(request, "Profile updated successfully!")
 
-        if user.is_superuser:
+        # Consistently use the 'current_user' variable for redirects
+        if current_user.is_superuser:
             return redirect('admin_dashboard')
-        elif user.is_staff:
+        elif current_user.is_staff:
             return redirect('staff_dashboard')
         else: 
             return redirect('user_dashboard')
 
     return render(request, 'update_profile.html', {
-        'user': user,
+        'user': current_user, # Passing the user object to the template context
         'profile': profile,
         'base_template': base_template
     })
