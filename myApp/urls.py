@@ -63,7 +63,7 @@ urlpatterns = [
     path('print_bookings/', views.print_bookings, name='print_bookings'),
 
     
-    path('menu/', views.food_menu, name='food_menu'),
+    # path('menu/', views.food_menu, name='food_menu'),
     path('order/place/', views.place_order, name='place_order'),
     # Pay for a specific food order
     path('pay-food/<int:order_id>/', views.pay_food_order, name='pay_food_order'),

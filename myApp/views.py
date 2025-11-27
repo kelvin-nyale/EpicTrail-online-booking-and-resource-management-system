@@ -1450,6 +1450,7 @@ def pay_booking(request, booking_id):
         amount = booking.amount_required  # use your model property
 
         # Initiate STK push
+
         result = initiate_stk_push(phone, amount)
 
         if result.get("ResponseCode") == "0":
@@ -2248,9 +2249,9 @@ def reports_analytics(request):
     })
 
 
-        # --------------------------
-        # Order Management Operations
-        # --------------------------
+# --------------------------
+# Order Management Operations
+# --------------------------
 
 # Order Placement
 @login_required
@@ -2312,49 +2313,93 @@ def update_order(request, order_id):
 
 
 
+# --------------------------
+# Admin placing orders on user behalf
+# --------------------------
+@login_required
+@user_passes_test(is_admin)
+def place_order_admin(request):
+    users = User.objects.all()
+    foods = Food.objects.all()
 
+    if request.method == "POST":
+        user_id = request.POST.get("user")
+        food_id = request.POST.get("food")
+        quantity = int(request.POST.get("quantity", 1))
+        check_in = request.POST.get("check_in")
+
+        user = User.objects.get(id=user_id) if user_id else None
+        food = get_object_or_404(Food, id=food_id)
+
+        # Create the FoodOrder
+        order = FoodOrder.objects.create(
+            foodOrder_user=user,
+            foodOrder_food=food,
+            foodOrder_quantity=quantity,
+            foodOrder_check_in=check_in,
+            foodOrder_status="Pending"
+        )
+
+        return redirect("pay_food_order", order_id=order.id)
+
+        # return redirect("manage_orders")
+
+    return render(request, "place_order_admin.html", {
+        "users": users,
+        "foods": foods,
+        # "order": order
+    })
+
+from django.views.decorators.http import require_POST
+
+# --------------------------
+# Admin updating order status
+# --------------------------
+@login_required
+@user_passes_test(is_admin)
+@require_POST
+def update_order_status(request, order_id):
+    order = get_object_or_404(FoodOrder, id=order_id)
+    new_status = request.POST.get('status')
+    if new_status in dict(FoodOrder.STATUS_CHOICES).keys():
+        order.foodOrder_status = new_status
+        order.save()
+        messages.success(request, f"Order #{order.id} updated to {new_status}.")
+    else:
+        messages.error(request, "Invalid status.")
+    return redirect('manage_orders')
+
+
+# --------------------------
+# Food Orders Payment
+# --------------------------
 # @login_required
 # def pay_food_order(request, order_id):
 #     order = get_object_or_404(FoodOrder, id=order_id)
+#     total_amount = order.total_price()
 
-#     # Calculate total amount
-#     total_amount = order.food.price_per_person * order.quantity
-
-#     if request.method == "POST":
-#         phone = request.POST.get("phone")
-#         if not phone:
-#             messages.error(request, "Please enter a valid phone number.")
-#             return redirect("pay_food_order", order_id=order_id)
-        
-#         try:
-#             result = initiate_stk_push(phone, total_amount)
-#             # Check if STK Push was successful
-#             if result.get("ResponseCode") == "0":
-#                 messages.success(request, "STK Push initiated! Check your phone to complete payment.")
-#             else:
-#                 messages.error(request, f"Payment failed: {result.get('errorMessage', 'Unknown error')}")
-#         except Exception as e:
-#             messages.error(request, f"Error initiating payment: {str(e)}")
-
-#         return redirect("my_orders")
-
-#     # Dynamic base template based on user role
 #     base_template = (
 #         "base.admin.html" if request.user.is_superuser
 #         else "base.staff.html" if request.user.is_staff
 #         else "base.user.html"
 #     )
 
+#     if request.method == "POST":
+#         phone = request.POST.get("phone")
+#         response = initiate_stk_push(phone, total_amount)
+
+#         if response.get("ResponseCode") == "0":
+#             messages.success(request, "STK Push initiated! Check your phone to complete the payment.")
+#         else:
+#             messages.error(request, response.get("errorMessage", "Failed to initiate payment."))
+
+#         return redirect("my_orders")
+
 #     return render(request, "pay_food.html", {
 #         "order": order,
 #         "total_amount": total_amount,
 #         "base_template": base_template,
-#         "navbar": "stk"
 #     })
-
-# --------------------------
-# Food Orders Payment
-# --------------------------
 @login_required
 def pay_food_order(request, order_id):
     order = get_object_or_404(FoodOrder, id=order_id)
@@ -2375,6 +2420,11 @@ def pay_food_order(request, order_id):
         else:
             messages.error(request, response.get("errorMessage", "Failed to initiate payment."))
 
+        # Redirect admin/staff to manage_orders
+        if request.user.is_superuser or request.user.is_staff:
+            return redirect("manage_orders")
+
+        # Regular users continue being redirected to my_orders
         return redirect("my_orders")
 
     return render(request, "pay_food.html", {
@@ -2384,51 +2434,39 @@ def pay_food_order(request, order_id):
     })
 
 
-
-
-# Food menu listing
+# Admin managing all food order operations
 @login_required
-def food_menu(request):
-    foods = Food.objects.all()
-    return render(request, 'food_menu.html', {'foods': foods})
+@user_passes_test(is_admin)
+def manage_orders(request):
+    orders = FoodOrder.objects.all().order_by('-foodOrder_created_at')
 
-# User viewing his or her placed orders only
-@login_required
-def my_orders(request):
-    orders = FoodOrder.objects.filter(foodOrder_user=request.user)  # <-- fix here
-    return render(request, 'my_orders.html', {'orders': orders})
+    # Search functionality
+    q = request.GET.get("q", "")
+    if q:
+        orders = orders.filter(
+            Q(foodOrder_user__username__icontains=q) |
+            Q(foodOrder_user__email__icontains=q) |
+            Q(foodOrder_food__food_name__icontains=q) |
+            Q(foodOrder_status__icontains=q)  # <-- Include status
+        )
 
+    # POST actions (approve, cancel, complete)
+    if request.method == "POST":
+        order_id = request.POST.get("order_id")
+        action = request.POST.get("action")
+        order = get_object_or_404(FoodOrder, id=order_id)
 
-# User udpdating his or her orders only
-@login_required
-def update_order(request, order_id):
-    order = get_object_or_404(
-        FoodOrder, 
-        id=order_id, 
-        foodOrder_user=request.user,
-        foodOrder_status='pending'
-    )
+        if action == "approve":
+            order.foodOrder_status = "Approved"
+        elif action == "cancel":
+            order.foodOrder_status = "Cancelled"
+        elif action == "completed":
+            order.foodOrder_status = "Completed"
 
-    foods = Food.objects.all()  # Fetch all food items to populate the select dropdown
-
-    if request.method == 'POST':
-        food_id = request.POST.get('food')
-        quantity = int(request.POST.get('quantity', order.foodOrder_quantity))
-        check_in = request.POST.get('foodOrder_check_in')
-
-        if food_id:
-            food_item = get_object_or_404(Food, id=food_id)
-            order.foodOrder_food = food_item
-
-        order.foodOrder_quantity = quantity
-        order.foodOrder_check_in = check_in
-        order.total_price = order.foodOrder_food.food_price_per_person * quantity
         order.save()
+        return redirect("manage_orders")
 
-        messages.info(request, "Order updated.")
-        return redirect('my_orders')
-
-    return render(request, 'update_order.html', {'order': order, 'foods': foods})
+    return render(request, "manage_orders.html", {"orders": orders})
 
 @login_required
 @user_passes_test(is_admin)
@@ -2490,7 +2528,51 @@ def delete_order_admin(request, order_id):
     order.delete()
     messages.success(request, f"Order #{order_id} has been deleted.")
     return redirect('manage_orders')
+    
 
+# Food menu listing
+# @login_required
+# def food_menu(request):
+#     foods = Food.objects.all()
+#     return render(request, 'food_menu.html', {'foods': foods})
+
+# User viewing his or her placed orders only
+@login_required
+def my_orders(request):
+    orders = FoodOrder.objects.filter(foodOrder_user=request.user)  # <-- fix here
+    return render(request, 'my_orders.html', {'orders': orders})
+
+
+# User udpdating his or her orders only
+@login_required
+def update_order(request, order_id):
+    order = get_object_or_404(
+        FoodOrder, 
+        id=order_id, 
+        foodOrder_user=request.user,
+        foodOrder_status='pending'
+    )
+
+    foods = Food.objects.all()  # Fetch all food items to populate the select dropdown
+
+    if request.method == 'POST':
+        food_id = request.POST.get('food')
+        quantity = int(request.POST.get('quantity', order.foodOrder_quantity))
+        check_in = request.POST.get('foodOrder_check_in')
+
+        if food_id:
+            food_item = get_object_or_404(Food, id=food_id)
+            order.foodOrder_food = food_item
+
+        order.foodOrder_quantity = quantity
+        order.foodOrder_check_in = check_in
+        order.total_price = order.foodOrder_food.food_price_per_person * quantity
+        order.save()
+
+        messages.info(request, "Order updated.")
+        return redirect('my_orders')
+
+    return render(request, 'update_order.html', {'order': order, 'foods': foods})
 
 # User canceling or deleting his or her orders only
 @login_required
@@ -2565,39 +2647,6 @@ def download_order_receipt(request, order_id):
 
     return response
 
-# Admin managing all food order operations
-@login_required
-@user_passes_test(is_admin)
-def manage_orders(request):
-    orders = FoodOrder.objects.all().order_by('-foodOrder_created_at')
-
-    # Search functionality
-    q = request.GET.get("q", "")
-    if q:
-        orders = orders.filter(
-            Q(foodOrder_user__username__icontains=q) |
-            Q(foodOrder_user__email__icontains=q) |
-            Q(foodOrder_food__food_name__icontains=q) |
-            Q(foodOrder_status__icontains=q)  # <-- Include status
-        )
-
-    # POST actions (approve, cancel, complete)
-    if request.method == "POST":
-        order_id = request.POST.get("order_id")
-        action = request.POST.get("action")
-        order = get_object_or_404(FoodOrder, id=order_id)
-
-        if action == "approve":
-            order.foodOrder_status = "Approved"
-        elif action == "cancel":
-            order.foodOrder_status = "Cancelled"
-        elif action == "completed":
-            order.foodOrder_status = "Completed"
-
-        order.save()
-        return redirect("manage_orders")
-
-    return render(request, "manage_orders.html", {"orders": orders})
 
 # --------------------------
 # Admin printing/downloading all/selected orders pdf document
@@ -2695,58 +2744,6 @@ def print_orders(request):
     response.write(pdf)
     return response
 
-# --------------------------
-# Admin placing orders on user behalf
-# --------------------------
-@login_required
-@user_passes_test(is_admin)
-def place_order_admin(request):
-    users = User.objects.all()
-    foods = Food.objects.all()
-
-    if request.method == "POST":
-        user_id = request.POST.get("user")
-        food_id = request.POST.get("food")
-        quantity = int(request.POST.get("quantity", 1))
-        check_in = request.POST.get("check_in")
-
-        user = User.objects.get(id=user_id) if user_id else None
-        food = get_object_or_404(Food, id=food_id)
-
-        # Create the FoodOrder
-        order = FoodOrder.objects.create(
-            foodOrder_user=user,
-            foodOrder_food=food,
-            foodOrder_quantity=quantity,
-            foodOrder_check_in=check_in,
-            foodOrder_status="Pending"
-        )
-
-        return redirect("manage_orders")
-
-    return render(request, "place_order_admin.html", {
-        "users": users,
-        "foods": foods,
-    })
-
-from django.views.decorators.http import require_POST
-
-# --------------------------
-# Admin updating orders
-# --------------------------
-@login_required
-@user_passes_test(is_admin)
-@require_POST
-def update_order_status(request, order_id):
-    order = get_object_or_404(FoodOrder, id=order_id)
-    new_status = request.POST.get('status')
-    if new_status in dict(FoodOrder.STATUS_CHOICES).keys():
-        order.foodOrder_status = new_status
-        order.save()
-        messages.success(request, f"Order #{order.id} updated to {new_status}.")
-    else:
-        messages.error(request, "Invalid status.")
-    return redirect('manage_orders')
 
 # --------------------------
 # Duty management. Assigning duties to staff members
