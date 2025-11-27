@@ -62,14 +62,14 @@
                     <td>{{ order.foodOrder_quantity|default:"-" }}</td>
                     <td>{{ order.total_price|floatformat:2 }}</td>
                     <td>
-                        {% if order.foodOrder_status == "Pending" %}
-                            <span class="badge bg-warning">Pending</span>
+                        {% if order.foodOrder_status == "Cancelled" %}
+                            <span class="badge bg-danger">Cancelled</span>
                         {% elif order.foodOrder_status == "Approved" %}
                             <span class="badge bg-info">Approved</span>
                         {% elif order.foodOrder_status == "Completed" %}
                             <span class="badge bg-success">Completed</span>
                         {% else %}
-                            <span class="badge bg-danger">Cancelled</span>
+                            <span class="badge bg-warning">Pending</span>
                         {% endif %}
                     </td>
                     <td>
