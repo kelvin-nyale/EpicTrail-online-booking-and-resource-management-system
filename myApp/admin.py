@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.apps import apps        # needed for apps.get_models()
 from django.db import models       # needed for models.Field, ForeignKey, etc.
 from django.utils.html import format_html
-from .models import ModelStructure
+# from .models import ModelStructure
 from .models import Profile, Activity, Package, Booking, Room, Food, Tour, RoomType, RoomBooking, Notification, Duty, FoodOrder
 from django.contrib.auth.models import User
 # Register your models here.
@@ -170,97 +170,97 @@ class BookingAdmin(admin.ModelAdmin):
     balance_display.short_description = "Balance"
 
 
-from django.urls import path
-from django.shortcuts import render
+# from django.urls import path
+# from django.shortcuts import render
 
-class ModelStructureAdmin(admin.ModelAdmin):
-    change_list_template = "admin/model_structure.html"
+# class ModelStructureAdmin(admin.ModelAdmin):
+#     change_list_template = "admin/model_structure.html"
 
-    def get_urls(self):
-        urls = super().get_urls()
-        custom = [
-            path("", self.admin_site.admin_view(self.view_models), name="modelstructure")
-        ]
-        return custom + urls
+#     def get_urls(self):
+#         urls = super().get_urls()
+#         custom = [
+#             path("", self.admin_site.admin_view(self.view_models), name="modelstructure")
+#         ]
+#         return custom + urls
 
-    def view_models(self, request):
-        app_groups = {}
+#     def view_models(self, request):
+#         app_groups = {}
 
-        # ------------------------------------------
-        # 1. USER MODEL (Merged with Profile.phone)
-        # ------------------------------------------
-        user_fields = []
-        user_field_whitelist = ["id", "username", "email", "password"]
+#         # ------------------------------------------
+#         # 1. USER MODEL (Merged with Profile.phone)
+#         # ------------------------------------------
+#         user_fields = []
+#         user_field_whitelist = ["id", "username", "email", "password"]
 
-        for field in User._meta.get_fields():
-            if field.name in user_field_whitelist:
-                name = field.name
-                ftype = type(field).__name__
-                pk = " (PK)" if getattr(field, "primary_key", False) else ""
+#         for field in User._meta.get_fields():
+#             if field.name in user_field_whitelist:
+#                 name = field.name
+#                 ftype = type(field).__name__
+#                 pk = " (PK)" if getattr(field, "primary_key", False) else ""
 
-                user_fields.append({
-                    "name": name,
-                    "type": ftype,
-                    "pk": pk,
-                    "rel": ""
-                })
+#                 user_fields.append({
+#                     "name": name,
+#                     "type": ftype,
+#                     "pk": pk,
+#                     "rel": ""
+#                 })
 
-        # Add phone field manually from Profile model
-        user_fields.append({
-            "name": "phone",
-            "type": "CharField",
-            "pk": "",
-            "rel": f" → {Profile._meta.app_label}.{Profile.__name__}"
-        })
+#         # Add phone field manually from Profile model
+#         user_fields.append({
+#             "name": "phone",
+#             "type": "CharField",
+#             "pk": "",
+#             "rel": f" → {Profile._meta.app_label}.{Profile.__name__}"
+#         })
 
-        app_groups["auth"] = [{
-            "model_name": "User",
-            "fields": user_fields
-        }]
+#         app_groups["auth"] = [{
+#             "model_name": "User",
+#             "fields": user_fields
+#         }]
 
-        # -------------------------------------------------
-        # 2. APP MODELS (ignore Django built-in models)
-        # -------------------------------------------------
-        excluded_apps = ["auth", "sessions", "admin", "contenttypes"]
+#         # -------------------------------------------------
+#         # 2. APP MODELS (ignore Django built-in models)
+#         # -------------------------------------------------
+#         excluded_apps = ["auth", "sessions", "admin", "contenttypes"]
 
-        for model in apps.get_models():
-            app_label = model._meta.app_label
-            model_name = model.__name__
+#         for model in apps.get_models():
+#             app_label = model._meta.app_label
+#             model_name = model.__name__
 
-            if app_label in excluded_apps:
-                continue
+#             if app_label in excluded_apps:
+#                 continue
 
-            fields = []
-            for field in model._meta.get_fields():
-                name = field.name
-                ftype = type(field).__name__
-                pk = " (PK)" if getattr(field, "primary_key", False) else ""
+#             fields = []
+#             for field in model._meta.get_fields():
+#                 name = field.name
+#                 ftype = type(field).__name__
+#                 pk = " (PK)" if getattr(field, "primary_key", False) else ""
 
-                rel = ""
-                if hasattr(field, "related_model") and field.related_model:
-                    rel = f" → {field.related_model._meta.app_label}.{field.related_model.__name__}"
+#                 rel = ""
+#                 if hasattr(field, "related_model") and field.related_model:
+#                     rel = f" → {field.related_model._meta.app_label}.{field.related_model.__name__}"
 
-                fields.append({
-                    "name": name,
-                    "type": ftype,
-                    "pk": pk,
-                    "rel": rel
-                })
+#                 fields.append({
+#                     "name": name,
+#                     "type": ftype,
+#                     "pk": pk,
+#                     "rel": rel
+#                 })
 
-            if app_label not in app_groups:
-                app_groups[app_label] = []
+#             if app_label not in app_groups:
+#                 app_groups[app_label] = []
 
-            app_groups[app_label].append({
-                "model_name": model_name,
-                "fields": fields
-            })
+#             app_groups[app_label].append({
+#                 "model_name": model_name,
+#                 "fields": fields
+#             })
 
-        context = {
-            "opts": ModelStructure._meta,
-            "app_groups": app_groups,
-        }
+#         context = {
+#             "opts": ModelStructure._meta,
+#             "app_groups": app_groups,
+#         }
 
-        return render(request, "admin/model_structure.html", context)
+#         return render(request, "admin/model_structure.html", context)
 
 
-admin.site.register(ModelStructure, ModelStructureAdmin)
+# admin.site.register(ModelStructure, ModelStructureAdmin)

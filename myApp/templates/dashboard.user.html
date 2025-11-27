@@ -77,12 +77,12 @@
                         <td>{{ booking.booking_check_in|date:"M d, Y" }}</td>
 
                         <td>
-                            {% if booking.status == "confirmed" %}
+                            {% if booking.booking_status == "confirmed" %}
                                 <span class="badge bg-success">Confirmed</span>
-                            {% elif booking.status == "pending" %}
+                            {% elif booking.booking_status == "pending" %}
                                 <span class="badge bg-warning">Pending</span>
                             {% else %}
-                                <span class="badge bg-secondary">{{ booking.status }}</span>
+                                <span class="badge bg-secondary">{{ booking.booking_status }}</span>
                             {% endif %}
                         </td>
                     </tr>

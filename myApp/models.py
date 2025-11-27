@@ -568,8 +568,8 @@ class MpesaTransaction(models.Model):
 # -----------------------------
 # VIEWING THE MODEL STRUCTURES IN THE DJANGO ADMIN
 # -----------------------------
-class ModelStructure(models.Model):
-    class Meta:
-        verbose_name = "Model Structure"
-        verbose_name_plural = "Model Structures"
-        managed = False
+# class ModelStructure(models.Model):
+#     class Meta:
+#         verbose_name = "Model Structure"
+#         verbose_name_plural = "Model Structures"
+#         managed = False

@@ -1425,8 +1425,8 @@ def admin_create_booking(request):
         booking.booking_food.set(request.POST.getlist("food"))
         booking.booking_tours.set(request.POST.getlist("tours"))
 
-        messages.success(request, "Booking created for user successfully!")
-        return redirect("booking_list")
+        messages.success(request, "Booking created for user successfully! Proceed to payment to complete booking.")
+        return redirect("pay_booking", booking_id=booking.id)
 
     return render(request, "booking.create_for_user.html", {
         "users": users,
@@ -1458,7 +1458,7 @@ def pay_booking(request, booking_id):
             messages.error(request, f"Payment initiation failed: {result.get('errorMessage', 'Unknown error')}")
 
         return redirect("booking_list")  # redirect after initiating payment
-
+    
     # Select base template dynamically
     base_template = (
         "base.admin.html" if request.user.is_superuser
@@ -1472,6 +1472,7 @@ def pay_booking(request, booking_id):
         "base_template": base_template,
         "navbar": "stk"
     })
+
 # --------------------------
 # Upcoming Bookings
 # --------------------------
@@ -1725,7 +1726,9 @@ def delete_booking(request, pk):
     messages.success(request, "Booking deleted successfully!")
     return redirect("booking_list")
 
-
+# --------------------------
+# Generating Bookings Document
+# --------------------------
 @login_required
 @user_passes_test(lambda u: u.is_superuser or u.is_staff)
 def print_bookings(request):
@@ -1854,6 +1857,7 @@ def mark_notification_read(request, pk):
         notif.is_read = True
         notif.save()
     return redirect('notifications')
+
 
 def explore(request):
     activities = Activity.objects.all()
@@ -2243,7 +2247,12 @@ def reports_analytics(request):
         "popular_tours": popular_tours,
     })
 
-# --- USERS ---
+
+        # --------------------------
+        # Order Management Operations
+        # --------------------------
+
+# Order Placement
 @login_required
 def place_order(request):
     foods = Food.objects.all() 
@@ -2269,6 +2278,9 @@ def place_order(request):
 
     return render(request, "place_order.html", {"foods": foods})
 
+# --------------------------
+# Updating Orders
+# --------------------------
 @login_required
 def update_order(request, order_id):
     # Get the order for the current user and only if it's pending
@@ -2339,6 +2351,10 @@ def update_order(request, order_id):
 #         "base_template": base_template,
 #         "navbar": "stk"
 #     })
+
+# --------------------------
+# Food Orders Payment
+# --------------------------
 @login_required
 def pay_food_order(request, order_id):
     order = get_object_or_404(FoodOrder, id=order_id)
@@ -2448,7 +2464,7 @@ def update_order_admin(request, order_id):
         # Update check-in date
         order.foodOrder_check_in = request.POST.get("check_in")
 
-        # ⭐ NEW: Update status (same structure as food)
+        # Update status (same structure as food)
         status = request.POST.get("foodOrder_status")
         if status:
             order.foodOrder_status = status
@@ -2490,6 +2506,9 @@ def cancel_order(request, order_id):
     messages.warning(request, "Order cancelled.")
     return redirect('my_orders')
 
+# --------------------------
+# Downloading Receipt Orders
+# --------------------------
 @login_required
 def download_order_receipt(request, order_id):
     # Ensures the user can only download their own orders
@@ -2546,7 +2565,7 @@ def download_order_receipt(request, order_id):
 
     return response
 
-# Admin managing all food orders operations
+# Admin managing all food order operations
 @login_required
 @user_passes_test(is_admin)
 def manage_orders(request):
@@ -2580,6 +2599,9 @@ def manage_orders(request):
 
     return render(request, "manage_orders.html", {"orders": orders})
 
+# --------------------------
+# Admin printing/downloading all/selected orders pdf document
+# --------------------------
 @login_required
 @user_passes_test(is_admin)
 def print_orders(request):
@@ -2673,7 +2695,9 @@ def print_orders(request):
     response.write(pdf)
     return response
 
-
+# --------------------------
+# Admin placing orders on user behalf
+# --------------------------
 @login_required
 @user_passes_test(is_admin)
 def place_order_admin(request):
@@ -2707,6 +2731,9 @@ def place_order_admin(request):
 
 from django.views.decorators.http import require_POST
 
+# --------------------------
+# Admin updating orders
+# --------------------------
 @login_required
 @user_passes_test(is_admin)
 @require_POST
@@ -2721,7 +2748,9 @@ def update_order_status(request, order_id):
         messages.error(request, "Invalid status.")
     return redirect('manage_orders')
 
-
+# --------------------------
+# Duty management. Assigning duties to staff members
+# --------------------------
 @login_required
 @user_passes_test(admin_required)
 def assign_duty(request):
@@ -2759,14 +2788,18 @@ def assign_duty(request):
         'duties': duties
     })
 
-
+# --------------------------
+# Duty view listing.
+# --------------------------
 @login_required
 @user_passes_test(admin_required)
 def duties(request):
     duties = Duty.objects.all().order_by('-duty_assigned_on')  # make sure field exists
     return render(request, 'duties.html', {'duties': duties})
 
-
+# --------------------------
+# Duty management. updating duties assigned to staff members
+# --------------------------
 @login_required
 def update_duty_status(request, duty_id):
     duty = get_object_or_404(Duty, id=duty_id)
@@ -2786,7 +2819,9 @@ def update_duty_status(request, duty_id):
 
     return render(request, 'duty.update.html', {'duty': duty})
 
-
+# --------------------------
+# Duty management. Staff viewing their assigned duties
+# --------------------------
 @login_required
 def staff_duties(request):
     duties = Duty.objects.filter(duty_staff=request.user).order_by('duty_due_date')  # use correct field name
@@ -2805,7 +2840,9 @@ def staff_duties(request):
     return render(request, "duties.staff.html", {"duties": duties})
 
 
-
+# --------------------------
+# User profile management
+# --------------------------
 @login_required
 def update_profile(request):
     # Retrieve the currently logged-in User object
@@ -2846,7 +2883,7 @@ def update_profile(request):
 
         messages.success(request, "Profile updated successfully!")
 
-        # Consistently use the 'current_user' variable for redirects
+        # Checking user roles for redirects
         if current_user.is_superuser:
             return redirect('admin_dashboard')
         elif current_user.is_staff:
@@ -2855,11 +2892,15 @@ def update_profile(request):
             return redirect('user_dashboard')
 
     return render(request, 'update_profile.html', {
-        'user': current_user, # Passing the user object to the template context
+        # Passing the objects to the template context
+        'user': current_user,
         'profile': profile,
         'base_template': base_template
     })
 
+# --------------------------
+# Data Backup Management
+# --------------------------
 @login_required
 @user_passes_test(admin_required)
 def backup_data(request):
@@ -3019,5 +3060,5 @@ def mpesa_callback(request):
 
     return JsonResponse({"ResultCode": 1, "ResultDesc": "Invalid request method"})
 
-# Display transactions to the admin
+
 
